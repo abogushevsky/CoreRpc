@@ -25,7 +25,8 @@ namespace CoreRpc.TestClient
                 var testServiceClient = ServiceClientFactory.CreateServiceClient<ITestService>(
                     "localhost",
                     logger,
-                    messagePackSerializerFactory);
+                    messagePackSerializerFactory,
+                    doUseSingleConnection: true);
 
                 Console.WriteLine("Test service client created.");
 

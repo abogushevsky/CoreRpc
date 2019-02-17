@@ -133,6 +133,10 @@ namespace CoreRpc.Networking.Rpc
 			{
 				try
 				{
+					/*
+					 * TODO: while(readMessage != EndOfSession)
+					 */
+					
 					var stream = GetNetworkStream();
 					var message = _messageSerializer.Deserialize(await stream.ReadMessageAsync());
 					var serviceCallResult = _serviceDispatcher.Dispatch(_serviceInstance, message);
@@ -143,9 +147,9 @@ namespace CoreRpc.Networking.Rpc
 						await stream.WriteMessageAsync(returnData);
 					}
 
-					_logger.LogDebug("Closing client");
+					// _logger.LogDebug("Closing client");
 					//TODO: Maybe this shouldn't be closed by server
-					stream.Close();
+					// stream.Close();
 				}
 				catch (Exception exception)
 				{

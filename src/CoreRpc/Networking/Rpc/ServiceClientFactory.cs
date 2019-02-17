@@ -19,10 +19,15 @@ namespace CoreRpc.Networking.Rpc
 		public static TService CreateServiceClient<TService>(
 			string hostName, 
 			ILogger logger,
-			ISerializerFactory serializerFactory) where TService : class
+			ISerializerFactory serializerFactory,
+			bool doUseSingleConnection = false) where TService : class
 		{
 			var serviceDescriptor = ServiceDescriptor.Of<TService>();
-			var tcpClient = new UnprotectedRpcTcpClient(hostName, serviceDescriptor.ServicePort, serializerFactory);
+			var tcpClient = new UnprotectedRpcTcpClient(
+				hostName, 
+				serviceDescriptor.ServicePort, 
+				serializerFactory, 
+				doUseSingleConnection);
 
 			return CreateServiceClientInstance<TService>(
 				       hostName,
@@ -35,14 +40,16 @@ namespace CoreRpc.Networking.Rpc
 		public static TService CreateSecuredServiceClient<TService>(
 			string hostName, 
 			ILogger logger,
-			ISerializerFactory serializerFactory,
-			RemoteCertificateValidationCallback serverCertificateValidationCallback) where TService : class
+			ISerializerFactory serializerFactory,			
+			RemoteCertificateValidationCallback serverCertificateValidationCallback,
+			bool doUseSingleConnection = false) where TService : class
 		{
 			var serviceDescriptor = ServiceDescriptor.Of<TService>();
 			var tcpClient = new SslRpcTcpClient(
 				hostName, 
 				serviceDescriptor.ServicePort, 
 				serializerFactory, 
+				doUseSingleConnection,
 				serverCertificateValidationCallback);
 
 			return CreateServiceClientInstance<TService>(
@@ -56,15 +63,17 @@ namespace CoreRpc.Networking.Rpc
 		public static TService CreateSecuredServiceClient<TService>(
 			string hostName, 
 			ILogger logger,
-			ISerializerFactory serializerFactory,
+			ISerializerFactory serializerFactory,			
 			RemoteCertificateValidationCallback serverCertificateValidationCallback,
-			LocalCertificateSelectionCallback clientSertificateSelectionCallback) where TService : class
+			LocalCertificateSelectionCallback clientSertificateSelectionCallback,
+			bool doUseSingleConnection = false) where TService : class
 		{
 			var serviceDescriptor = ServiceDescriptor.Of<TService>();
 			var tcpClient = new SslRpcTcpClient(
 				hostName, 
 				serviceDescriptor.ServicePort, 
 				serializerFactory, 
+				doUseSingleConnection,
 				serverCertificateValidationCallback,
 				clientSertificateSelectionCallback);
 

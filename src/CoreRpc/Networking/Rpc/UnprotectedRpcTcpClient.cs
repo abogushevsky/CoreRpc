@@ -9,7 +9,8 @@ namespace CoreRpc.Networking.Rpc
 		public UnprotectedRpcTcpClient(
 			string hostName, 
 			int port, 
-			ISerializerFactory serializerFactory) : base(hostName, port, serializerFactory)
+			ISerializerFactory serializerFactory,
+			bool doUseSingleConnection) : base(hostName, port, serializerFactory, doUseSingleConnection)
 		{
 		}
 
