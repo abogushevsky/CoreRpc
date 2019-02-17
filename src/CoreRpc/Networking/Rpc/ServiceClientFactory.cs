@@ -4,7 +4,6 @@ using System.IO;
 using System.Linq;
 using System.Net.Security;
 using System.Reflection;
-using Common.Infrastructure.Networking.Rpc;
 using CoreRpc.CodeGeneration;
 using CoreRpc.Logging;
 using CoreRpc.Serialization;
@@ -111,7 +110,7 @@ namespace CoreRpc.Networking.Rpc
 					.Distinct()
 					.ToArray())
 				.AddMembers(
-					SyntaxFactory.NamespaceDeclaration(SyntaxFactory.IdentifierName("TestNamespace"))
+					SyntaxFactory.NamespaceDeclaration(SyntaxFactory.IdentifierName(serviceType.Namespace))
 						.AddMembers(
 							SyntaxFactory.ClassDeclaration(className)
 								.AddModifiers(SyntaxFactory.ParseToken("public"), SyntaxFactory.ParseToken("sealed"))

@@ -1,4 +1,4 @@
-﻿namespace Common.Infrastructure.Networking.Rpc
+﻿namespace CoreRpc.Networking.Rpc
 {
 	public class RpcMessage
 	{

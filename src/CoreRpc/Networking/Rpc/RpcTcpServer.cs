@@ -5,7 +5,6 @@ using System.Net.Security;
 using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
-using Common.Infrastructure.Networking.Rpc;
 using CoreRpc.Logging;
 using CoreRpc.Serialization;
 

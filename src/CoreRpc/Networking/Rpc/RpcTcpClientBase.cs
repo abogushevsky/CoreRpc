@@ -1,11 +1,9 @@
 using System;
 using System.IO;
 using System.Net.Sockets;
-using CoreRpc.Networking;
-using CoreRpc.Networking.Rpc;
 using CoreRpc.Serialization;
 
-namespace Common.Infrastructure.Networking.Rpc
+namespace CoreRpc.Networking.Rpc
 {
 	public abstract class RpcTcpClientBase : IDisposable
 	{

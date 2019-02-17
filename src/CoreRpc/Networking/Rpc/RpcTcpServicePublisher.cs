@@ -1,5 +1,4 @@
 using System;
-using Common.Infrastructure.Networking.Rpc;
 using CoreRpc.Logging;
 using CoreRpc.Serialization;
 

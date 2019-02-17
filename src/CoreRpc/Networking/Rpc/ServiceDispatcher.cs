@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
-using Common.Infrastructure.Networking.Rpc;
 using CoreRpc.Logging;
 using CoreRpc.Networking.Rpc.Exceptions;
 using CoreRpc.Networking.Rpc.ServiceAnnotations;

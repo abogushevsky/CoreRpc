@@ -1,13 +1,18 @@
 ﻿using System;
+using System.Collections.Concurrent;
+using System.Collections.Generic;
+using System.Threading;
+using System.Threading.Tasks;
 using CoreRpc.Utilities;
 
 namespace CoreRpc.Logging
 {
-	public class ConsoleLoggerWrapper : ILogger
+	public class ConsoleLoggerWrapper : ILogger, IDisposable
 	{ 
 		public ConsoleLoggerWrapper(ILogger wrappedLogger)
 		{
 			_wrappedLogger = wrappedLogger;
+			Task.Factory.StartNew(ProcessConsoleActionsQueue, TaskCreationOptions.LongRunning);
 		}
 
 		public void LogError(Exception exception)
@@ -41,16 +46,22 @@ namespace CoreRpc.Logging
 			_wrappedLogger.LogDebug(message);
 			WriteToConsoleWithColor(() => Console.WriteLine($"Debug: {message}"), ConsoleColor.Green);
 		}
+		
+		public void Dispose() => _isDisposed = true;
 
-		private static void WriteToConsoleWithColor(Action write, ConsoleColor color)
+		private void WriteToConsoleWithColor(Action write, ConsoleColor color)
 		{
-			var previousColor = Console.ForegroundColor;
-			Console.ForegroundColor = color;
-			write();
-			Console.ForegroundColor = previousColor;
+			_consoleActionsQueue.Enqueue(() =>
+			{
+				var previousColor = Console.ForegroundColor;
+				Console.ForegroundColor = color;
+				write();
+				Console.ForegroundColor = previousColor;
+			});
+			_queueHandlerWaitHandle.Set();
 		}
 
-		private static void WriteInnerExceptionsInConsole(Exception exception)
+		private void WriteInnerExceptionsInConsole(Exception exception)
 		{
 			switch (exception)
 			{
@@ -72,7 +83,7 @@ namespace CoreRpc.Logging
 			}
 		}
 
-		private static void WriteInnerException(Exception exception)
+		private void WriteInnerException(Exception exception)
 		{
 			if (exception.InnerException == null)
 			{
@@ -83,12 +94,31 @@ namespace CoreRpc.Logging
 			WriteExceptionToConsole(exception.InnerException);
 		}
 
-		private static void WriteExceptionToConsole(Exception ex) => WriteToConsoleWithColor(() => Console.Error.WriteLine(ex), ConsoleColor.Red);
+		private void WriteExceptionToConsole(Exception ex) => WriteToConsoleWithColor(() => Console.Error.WriteLine(ex), ConsoleColor.Red);
 
-		private static void WriteExceptionSeparatorToConsole() => WriteToConsoleWithColor(
+		private void WriteExceptionSeparatorToConsole() => WriteToConsoleWithColor(
 			() => Console.Error.WriteLine($"====================================================="),
 			ConsoleColor.Red);
 
+		private void ProcessConsoleActionsQueue()
+		{
+			while (!_isDisposed)
+			{
+				_queueHandlerWaitHandle.WaitOne();
+				while (_consoleActionsQueue.TryDequeue(out var consoleAction))
+				{
+					lock (_consoleSyncRoot)
+					{
+						consoleAction();
+					}
+				}											
+			}
+		}
+
 		private readonly ILogger _wrappedLogger;
+		private readonly ConcurrentQueue<Action> _consoleActionsQueue = new ConcurrentQueue<Action>();
+		private readonly object _consoleSyncRoot = new object();
+		private readonly AutoResetEvent _queueHandlerWaitHandle = new AutoResetEvent(false);
+		private bool _isDisposed;		
 	}
 }

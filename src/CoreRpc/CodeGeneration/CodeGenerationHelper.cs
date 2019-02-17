@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using Common.Infrastructure.Networking.Rpc;
 using CoreRpc.Networking.Rpc;
 using CoreRpc.Serialization;
 using CoreRpc.Utilities;
@@ -66,12 +65,19 @@ namespace CoreRpc.CodeGeneration
 					$"{GetParametersSerializationCode(methodInfo.GetParameters().Select(parameterInfo => new MethodParameter(parameterInfo)).ToArray())}"),
 				SyntaxFactory.ParseStatement(GetRemoteCallCode(methodInfo)));
 
-		private static string GetParametersSerializationCode(MethodParameter[] parameters) =>
-			parameters.Aggregate(
+		private static string GetParametersSerializationCode(MethodParameter[] parameters)
+		{
+			if (!parameters.Any())
+			{
+				return "Array.Empty<byte[]>()";
+			}
+			
+			return parameters.Aggregate(
 				seed: "new [] {",
 				func: (result, parameter) =>
 					$"{result} {GetSerializerCallString(parameter.Type, parameter.Name, true)},",
 				resultSelector: result => $"{result.Remove(result.Length - 1)} }}");
+		}
 
 		private static string GetSerializerCallString(Type serializableType, string parameterName, bool doSerialize) =>
 			$"{serializerFactoryFieldName}.{nameof(ISerializerFactory.CreateSerializer)}<{ParameterTypeToString(serializableType)}>().{GetSerializerMethodName(doSerialize)}({parameterName})";
