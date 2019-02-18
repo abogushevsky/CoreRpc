@@ -138,18 +138,25 @@ namespace CoreRpc.Networking.Rpc
 					 */
 					
 					var stream = GetNetworkStream();
-					var message = _messageSerializer.Deserialize(await stream.ReadMessageAsync());
-					var serviceCallResult = _serviceDispatcher.Dispatch(_serviceInstance, message);
-					if (serviceCallResult.HasReturnValue || serviceCallResult.HasException)
+					var message = await stream.ReadMessageAsync();
+
+					while (!message.IsEndOfSessionMessage())
 					{
-						var returnData = _serviceCallResultSerializer.Serialize(serviceCallResult);
-						_logger.LogDebug($"Sending {returnData.Length} bytes to caller");
-						await stream.WriteMessageAsync(returnData);
+						var deserializedMessage = _messageSerializer.Deserialize(message);
+						var serviceCallResult = _serviceDispatcher.Dispatch(_serviceInstance, deserializedMessage);
+						if (serviceCallResult.HasReturnValue || serviceCallResult.HasException)
+						{
+							var returnData = _serviceCallResultSerializer.Serialize(serviceCallResult);
+							_logger.LogDebug($"Sending {returnData.Length} bytes to caller");
+							await stream.WriteMessageAsync(returnData);
+						}
+
+						message = await stream.ReadMessageAsync();
 					}
 
-					// _logger.LogDebug("Closing client");
+					_logger.LogDebug("EndOfSession message received. Closing client.");
 					//TODO: Maybe this shouldn't be closed by server
-					// stream.Close();
+					stream.Close();
 				}
 				catch (Exception exception)
 				{

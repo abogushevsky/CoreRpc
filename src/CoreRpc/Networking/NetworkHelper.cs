@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
@@ -63,6 +64,11 @@ namespace CoreRpc.Networking
 			} while (bytesRead != 0);
 
 			return receivedData.ToArray();
+		}
+
+		public static bool IsEndOfSessionMessage(this byte[] message)
+		{
+			throw new NotImplementedException();
 		}
 
 		private static bool ContainsEndOfMessage(this List<byte> messageBytes) =>
