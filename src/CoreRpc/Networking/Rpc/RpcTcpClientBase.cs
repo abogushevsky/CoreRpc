@@ -24,28 +24,30 @@ namespace CoreRpc.Networking.Rpc
 			}
 		}
 		
+		// TODO: Rename Send and SendAndReceive
+		
 		public void Send(byte[] data) => ConnectAndSend(serviceCallResult => 0, data);
 
 		public byte[] SendAndReceive(byte[] data) => 
 			ConnectAndSend(serviceCallResult => serviceCallResult.ReturnValue, data);
 		
-		private TResult ConnectAndSend<TResult>(Func<ServiceCallResult, TResult> doWithServiceCallResult, byte[] data)
+		private TResponse ConnectAndSend<TResponse>(Func<ServiceCallResult, TResponse> doWithServiceCallResult, byte[] data) => 
+			DoWithConnectedTcpClient(tcpClient => doWithServiceCallResult(SendDataAndGetResult(tcpClient, data)));
+
+		private ServiceCallResult SendDataAndGetResult(TcpClient tcpClient, byte[] data)
 		{
-			return DoWithConnectedTcpClient(tcpClient =>
+			using (var networkStream = GetNetworkStreamFromTcpClient(tcpClient))
 			{
-				using (var networkStream = GetNetworkStreamFromTcpClient(tcpClient))
+				networkStream.WriteMessage(data);
+
+				var serviceCallResult = _serviceCallResultSerializer.Deserialize(networkStream.ReadMessage());
+				if (serviceCallResult.HasException)
 				{
-					networkStream.WriteMessage(data);
-
-					var serviceCallResult = _serviceCallResultSerializer.Deserialize(networkStream.ReadMessage());
-					if (serviceCallResult.HasException)
-					{
-						throw ExceptionsSerializer.Instance.Deserialize(serviceCallResult.Exception);
-					}
-
-					return doWithServiceCallResult(serviceCallResult);
+					throw ExceptionsSerializer.Instance.Deserialize(serviceCallResult.Exception);
 				}
-			});
+
+				return serviceCallResult;
+			}
 		}
 
 		private TResult DoWithConnectedTcpClient<TResult>(Func<TcpClient, TResult> doWithTcpClient)
@@ -63,7 +65,7 @@ namespace CoreRpc.Networking.Rpc
 					{
 						if (tcpClient.Connected)
 						{
-							// TODO: send end of session message
+							SendDataAndGetResult(tcpClient, NetworkConstants.EndOfSessionMessageBytes);
 						}
 						
 						tcpClient.Close();
@@ -89,6 +91,7 @@ namespace CoreRpc.Networking.Rpc
 			if (_tcpClient.Connected)
 			{
 				// TODO: send end of session message
+				SendDataAndGetResult(_tcpClient, NetworkConstants.EndOfSessionMessageBytes);
 				_tcpClient.Close();
 			}	
 			
