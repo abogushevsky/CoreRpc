@@ -66,10 +66,10 @@ namespace CoreRpc.Networking
 			return receivedData.ToArray();
 		}
 
-		public static bool IsEndOfSessionMessage(this byte[] message)
-		{
-			throw new NotImplementedException();
-		}
+		public static bool IsEndOfSessionMessage(this byte[] messageBytes) =>
+			messageBytes
+				.Take(messageBytes.Length - NetworkConstants.EndOfMessageBytes.Length)
+				.SequenceEqual(NetworkConstants.EndOfSessionMessageBytes);
 
 		private static bool ContainsEndOfMessage(this List<byte> messageBytes) =>
 			messageBytes
