@@ -26,7 +26,7 @@ namespace CoreRpc.TestClient
                     "localhost",
                     logger,
                     messagePackSerializerFactory,
-                    doUseSingleConnection: false);
+                    doUseSingleConnection: true);
 
                 Console.WriteLine("Test service client created.");
 

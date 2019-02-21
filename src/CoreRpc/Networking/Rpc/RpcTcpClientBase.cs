@@ -34,53 +34,57 @@ namespace CoreRpc.Networking.Rpc
 		private TResponse ConnectAndSend<TResponse>(Func<ServiceCallResult, TResponse> doWithServiceCallResult, byte[] data) => 
 			DoWithConnectedTcpClient(tcpClient => doWithServiceCallResult(SendDataAndGetResult(tcpClient, data)));
 
-		private ServiceCallResult SendDataAndGetResult(TcpClient tcpClient, byte[] data)
-		{
-			using (var networkStream = GetNetworkStreamFromTcpClient(tcpClient))
+		private ServiceCallResult SendDataAndGetResult(Stream networkStream, byte[] data)
+		{			
+			networkStream.WriteMessage(data);
+
+			var serviceCallResult = _serviceCallResultSerializer.Deserialize(networkStream.ReadMessage());
+			if (serviceCallResult.HasException)
 			{
-				networkStream.WriteMessage(data);
-
-				var serviceCallResult = _serviceCallResultSerializer.Deserialize(networkStream.ReadMessage());
-				if (serviceCallResult.HasException)
-				{
-					throw ExceptionsSerializer.Instance.Deserialize(serviceCallResult.Exception);
-				}
-
-				return serviceCallResult;
+				throw ExceptionsSerializer.Instance.Deserialize(serviceCallResult.Exception);
 			}
+
+			return serviceCallResult;
 		}
 
-		private TResult DoWithConnectedTcpClient<TResult>(Func<TcpClient, TResult> doWithTcpClient)
+		private TResult DoWithConnectedTcpClient<TResult>(Func<Stream, TResult> doWithTcpClient)
 		{
-			if (!_doUseSingleConnection)
+			if (_doUseSingleConnection)
 			{
-				using (var tcpClient = new TcpClient())
+				lock (_tcpClientSyncRoot)
 				{
-					try
+					if (!_tcpClient.Connected)
 					{
-						tcpClient.Connect(_hostName, _port);
-						return doWithTcpClient(tcpClient);
+						_tcpClient.Connect(_hostName, _port);
+						_networkStream = GetNetworkStreamFromTcpClient(_tcpClient);
 					}
-					finally
+
+					return doWithTcpClient(_networkStream);
+				}	
+			}			
+			
+			using (var tcpClient = new TcpClient())
+			{
+				try
+				{
+					tcpClient.Connect(_hostName, _port);
+					
+					// TODO: Wrap to separate try-catch
+					using (var networkStream = GetNetworkStreamFromTcpClient(tcpClient))
 					{
-						if (tcpClient.Connected)
-						{
-							SendDataAndGetResult(tcpClient, NetworkConstants.EndOfSessionMessageBytes);
-						}
+						return doWithTcpClient(networkStream);
+					}
+				}
+				finally
+				{
+					if (tcpClient.Connected)
+					{
+						// TODO: Execute safely. Move upper.
+						// SendDataAndGetResult(tcpClient, NetworkConstants.EndOfSessionMessageBytes);
+					}
 						
-						tcpClient.Close();
-					}
+					tcpClient.Close();
 				}
-			}
-
-			lock (_tcpClientSyncRoot)
-			{
-				if (!_tcpClient.Connected)
-				{
-					_tcpClient.Connect(_hostName, _port);
-				}
-
-				return doWithTcpClient(_tcpClient);
 			}
 		}
 					
@@ -90,8 +94,8 @@ namespace CoreRpc.Networking.Rpc
 		{
 			if (_tcpClient.Connected)
 			{
-				// TODO: send end of session message
-				SendDataAndGetResult(_tcpClient, NetworkConstants.EndOfSessionMessageBytes);
+				// TODO: Execute safely
+				SendDataAndGetResult(_networkStream, NetworkConstants.EndOfSessionMessageBytes);
 				_tcpClient.Close();
 			}	
 			
@@ -103,7 +107,8 @@ namespace CoreRpc.Networking.Rpc
 		private readonly int _port;
 		private readonly bool _doUseSingleConnection;
 		private readonly ISerializer<ServiceCallResult> _serviceCallResultSerializer;
-		private readonly TcpClient _tcpClient;		
+		private readonly TcpClient _tcpClient;
+		private Stream _networkStream;
 		private readonly object _tcpClientSyncRoot = new object();
 	}
 }
