@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using System.Linq;
 using System.Net;
 using System.Net.Security;
 using System.Net.Sockets;
@@ -140,7 +141,7 @@ namespace CoreRpc.Networking.Rpc
 					var stream = GetNetworkStream();
 					var message = await stream.ReadMessageAsync();
 
-					while (!message.IsEndOfSessionMessage())
+					while (message.Any() && !message.IsEndOfSessionMessage())
 					{
 						var deserializedMessage = _messageSerializer.Deserialize(message);
 						var serviceCallResult = _serviceDispatcher.Dispatch(_serviceInstance, deserializedMessage);
