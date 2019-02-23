@@ -20,8 +20,10 @@ namespace CoreRpc.TestClient
             {
                 Helpers.LogCurrentMemoryUsage(logger);
                 Console.ReadLine();
-                
+
                 var messagePackSerializerFactory = new MessagePackSerializerFactory();
+
+                // TODO: client should implement IDisposable
                 var testServiceClient = ServiceClientFactory.CreateServiceClient<ITestService>(
                     "localhost",
                     logger,
@@ -35,7 +37,7 @@ namespace CoreRpc.TestClient
                 Enumerable
                     .Range(0, warmUpCallsCount)
                     .ParallelForEach(_ => SendRequestAndLogResult(testServiceClient, logger));
-                
+
                 Thread.Sleep(TimeSpan.FromSeconds(5));
 
                 var stopwatch = new Stopwatch();

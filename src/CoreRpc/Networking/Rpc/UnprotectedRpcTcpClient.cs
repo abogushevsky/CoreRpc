@@ -10,7 +10,7 @@ namespace CoreRpc.Networking.Rpc
 			string hostName, 
 			int port, 
 			ISerializerFactory serializerFactory,
-			bool doUseSingleConnection) : base(hostName, port, serializerFactory, doUseSingleConnection)
+			bool doUseSingleConnection) : base(hostName, port, serializerFactory)
 		{
 		}
 

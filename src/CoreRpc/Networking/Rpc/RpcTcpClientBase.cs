@@ -10,20 +10,15 @@ namespace CoreRpc.Networking.Rpc
 		protected RpcTcpClientBase(
 			string hostName,
 			int port,
-			ISerializerFactory serializerFactory,
-			bool doUseSingleConnection)
+			ISerializerFactory serializerFactory)
 		{
 			_hostName = hostName;
 			_port = port;
-			_doUseSingleConnection = doUseSingleConnection;
 			_serviceCallResultSerializer = serializerFactory.CreateSerializer<ServiceCallResult>();
 
-			if (_doUseSingleConnection)
-			{
-				_tcpClient = new TcpClient();
-			}
+			_tcpClient = new TcpClient();
 		}
-		
+
 		// TODO: Rename Send and SendAndReceive
 		
 		public void Send(byte[] data) => ConnectAndSend(serviceCallResult => 0, data);
@@ -47,47 +42,20 @@ namespace CoreRpc.Networking.Rpc
 			return serviceCallResult;
 		}
 
-		private TResult DoWithConnectedTcpClient<TResult>(Func<Stream, TResult> doWithTcpClient)
+		private TResult DoWithConnectedTcpClient<TResult>(Func<Stream, TResult> doWithNetworkStream)
 		{
-			if (_doUseSingleConnection)
+			lock (_tcpClientSyncRoot)
 			{
-				lock (_tcpClientSyncRoot)
+				if (!_tcpClient.Connected)
 				{
-					if (!_tcpClient.Connected)
-					{
-						_tcpClient.Connect(_hostName, _port);
-						_networkStream = GetNetworkStreamFromTcpClient(_tcpClient);
-					}
+					_tcpClient.Connect(_hostName, _port);
+					_networkStream = GetNetworkStreamFromTcpClient(_tcpClient);
+				}
 
-					return doWithTcpClient(_networkStream);
-				}	
-			}			
-			
-			using (var tcpClient = new TcpClient())
-			{
-				try
-				{
-					tcpClient.Connect(_hostName, _port);
-					
-					// TODO: Wrap to separate try-catch
-					using (var networkStream = GetNetworkStreamFromTcpClient(tcpClient))
-					{
-						return doWithTcpClient(networkStream);
-					}
-				}
-				finally
-				{
-					if (tcpClient.Connected)
-					{
-						// TODO: Execute safely. Move upper.
-						// SendDataAndGetResult(tcpClient, NetworkConstants.EndOfSessionMessageBytes);
-					}
-						
-					tcpClient.Close();
-				}
+				return doWithNetworkStream(_networkStream);
 			}
 		}
-					
+
 		protected abstract Stream GetNetworkStreamFromTcpClient(TcpClient tcpClient);
 		
 		public void Dispose()
@@ -105,7 +73,6 @@ namespace CoreRpc.Networking.Rpc
 		protected readonly string _hostName;
 		
 		private readonly int _port;
-		private readonly bool _doUseSingleConnection;
 		private readonly ISerializer<ServiceCallResult> _serviceCallResultSerializer;
 		private readonly TcpClient _tcpClient;
 		private Stream _networkStream;

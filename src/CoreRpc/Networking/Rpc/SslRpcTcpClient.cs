@@ -13,7 +13,7 @@ namespace CoreRpc.Networking.Rpc
 			ISerializerFactory serializerFactory,
 			bool doUseSingleConnection,
 			RemoteCertificateValidationCallback serverCertificateValidationCallback) : 
-			base(hostName, port, serializerFactory, doUseSingleConnection)
+			base(hostName, port, serializerFactory)
 		{
 			_serverCertificateValidationCallback = serverCertificateValidationCallback;
 		}
@@ -25,7 +25,7 @@ namespace CoreRpc.Networking.Rpc
 			bool doUseSingleConnection,
 			RemoteCertificateValidationCallback serverCertificateValidationCallback,
 			LocalCertificateSelectionCallback clientCertificateSelectionCallback) : 
-			base(hostName, port, serializerFactory, doUseSingleConnection)
+			base(hostName, port, serializerFactory)
 		{
 			_serverCertificateValidationCallback = serverCertificateValidationCallback;
 			_clientCertificateSelectionCallback = clientCertificateSelectionCallback;
