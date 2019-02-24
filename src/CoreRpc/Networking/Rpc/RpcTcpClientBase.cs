@@ -35,7 +35,7 @@ namespace CoreRpc.Networking.Rpc
 
 		private ServiceCallResult SendDataAndGetResult(Stream networkStream, byte[] data)
 		{			
-			networkStream.WriteMessage(data);
+			SendData(networkStream, data);
 
 			var serviceCallResult = _serviceCallResultSerializer.Deserialize(networkStream.ReadMessage());
 			if (serviceCallResult.HasException)
@@ -45,6 +45,8 @@ namespace CoreRpc.Networking.Rpc
 
 			return serviceCallResult;
 		}
+
+		private static void SendData(Stream networkStream, byte[] data) => networkStream.WriteMessage(data);
 
 		private TResult DoWithConnectedTcpClient<TResult>(Func<Stream, TResult> doWithNetworkStream)
 		{
@@ -65,20 +67,17 @@ namespace CoreRpc.Networking.Rpc
 		public void Dispose()
 		{
 			if (_tcpClient.Connected)
-			{
-				// TODO: Execute safely
+			{				
 				ExceptionsHandlingHelper.ExecuteWithExceptionLogging(
-					() => SendDataAndGetResult(_networkStream, NetworkConstants.EndOfSessionMessageBytes),
-					_logger);
-				ExceptionsHandlingHelper.ExecuteWithExceptionLogging(
+					() => SendData(_networkStream, NetworkConstants.EndOfSessionMessageBytes),
 					() =>
 					{
-						_networkStream.Dispose();
 						_tcpClient.Close();
+						_networkStream.Dispose();
 					},
 					_logger);
-			}	
-			
+			}
+
 			_tcpClient.Dispose();
 		}
 		
