@@ -24,35 +24,36 @@ namespace CoreRpc.TestClient
                 var messagePackSerializerFactory = new MessagePackSerializerFactory();
 
                 // TODO: client should implement IDisposable
-                var testServiceClient = ServiceClientFactory.CreateServiceClient<ITestService>(
+                using (var testServiceClient = ServiceClientFactory.CreateServiceClient<ITestService>(
                     "localhost",
                     logger,
                     messagePackSerializerFactory,
-                    doUseSingleConnection: true);
+                    doUseSingleConnection: true))
+                {
+                    Console.WriteLine("Test service client created.");
 
-                Console.WriteLine("Test service client created.");
+                    // Warm up
+                    const int warmUpCallsCount = 5000;
+                    Enumerable
+                        .Range(0, warmUpCallsCount)
+                        .ParallelForEach(_ => SendRequestAndLogResult(testServiceClient.ServiceInstance, logger));
 
-                // Warm up
-                const int warmUpCallsCount = 5000;
-                Enumerable
-                    .Range(0, warmUpCallsCount)
-                    .ParallelForEach(_ => SendRequestAndLogResult(testServiceClient, logger));
+                    Thread.Sleep(TimeSpan.FromSeconds(5));
 
-                Thread.Sleep(TimeSpan.FromSeconds(5));
+                    var stopwatch = new Stopwatch();
+                    stopwatch.Start();
+                    const int callsCount = 1000;
+                    Enumerable
+                        .Range(0, callsCount)
+                        .ParallelForEach(_ => SendRequestAndLogResult(testServiceClient.ServiceInstance, logger));
+                    stopwatch.Stop();
+                    logger.LogInfo($"Elapsed ms: {stopwatch.Elapsed.TotalMilliseconds}");
 
-                var stopwatch = new Stopwatch();
-                stopwatch.Start();
-                const int callsCount = 1000;
-                Enumerable
-                    .Range(0, callsCount)
-                    .ParallelForEach(_ => SendRequestAndLogResult(testServiceClient, logger));
-                stopwatch.Stop();
-                logger.LogInfo($"Elapsed ms: {stopwatch.Elapsed.TotalMilliseconds}");
+                    Helpers.LogCurrentMemoryUsage(logger);
 
-                Helpers.LogCurrentMemoryUsage(logger);
-
-                Console.WriteLine("All requests send.");
-                Console.ReadLine();
+                    Console.WriteLine("All requests send.");
+                    Console.ReadLine();
+                }
             }
         }
 

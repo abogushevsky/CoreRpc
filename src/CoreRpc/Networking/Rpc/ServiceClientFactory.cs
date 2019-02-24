@@ -16,7 +16,7 @@ namespace CoreRpc.Networking.Rpc
 	[SuppressMessage("ReSharper", "CoVariantArrayConversion")]
 	public static class ServiceClientFactory
 	{
-		public static TService CreateServiceClient<TService>(
+		public static ServiceClient<TService> CreateServiceClient<TService>(
 			string hostName, 
 			ILogger logger,
 			ISerializerFactory serializerFactory,
@@ -37,7 +37,7 @@ namespace CoreRpc.Networking.Rpc
 				       tcpClient);
 		}
 		
-		public static TService CreateSecuredServiceClient<TService>(
+		public static ServiceClient<TService> CreateSecuredServiceClient<TService>(
 			string hostName, 
 			ILogger logger,
 			ISerializerFactory serializerFactory,			
@@ -60,7 +60,7 @@ namespace CoreRpc.Networking.Rpc
 				tcpClient);
 		}
 		
-		public static TService CreateSecuredServiceClient<TService>(
+		public static ServiceClient<TService> CreateSecuredServiceClient<TService>(
 			string hostName, 
 			ILogger logger,
 			ISerializerFactory serializerFactory,			
@@ -85,7 +85,7 @@ namespace CoreRpc.Networking.Rpc
 				tcpClient);
 		}
 
-		private static TService CreateServiceClientInstance<TService>(
+		private static ServiceClient<TService> CreateServiceClientInstance<TService>(
 			string hostName,
 			ILogger logger,
 			ISerializerFactory serializerFactory,
@@ -197,13 +197,15 @@ namespace CoreRpc.Networking.Rpc
 			stream.Seek(0, SeekOrigin.Begin);
 			var generatedAssembly = Assembly.Load(stream.ToArray());
 			var generatedClass = generatedAssembly.DefinedTypes.Single();
-			return Activator.CreateInstance(
+			var serviceInstance = Activator.CreateInstance(
 				generatedClass,
 				hostName,
 				logger,
 				serializerFactory,
 				serviceDescriptor,
 				tcpClient) as TService;
+			
+			return new ServiceClient<TService>(tcpClient, serviceInstance);
 		}
 	}
 }
