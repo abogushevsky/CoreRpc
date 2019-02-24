@@ -1,5 +1,6 @@
 using System.IO;
 using System.Net.Sockets;
+using CoreRpc.Logging;
 using CoreRpc.Serialization;
 
 namespace CoreRpc.Networking.Rpc
@@ -9,7 +10,8 @@ namespace CoreRpc.Networking.Rpc
 		public UnprotectedRpcTcpClient(
 			string hostName, 
 			int port, 
-			ISerializerFactory serializerFactory) : base(hostName, port, serializerFactory)
+			ISerializerFactory serializerFactory,
+			ILogger logger) : base(hostName, port, serializerFactory, logger)
 		{
 		}
 
