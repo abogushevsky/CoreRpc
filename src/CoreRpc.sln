@@ -10,6 +10,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CoreRpc.TestServer", "CoreR
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CoreRpc.TestClient", "CoreRpc.TestClient\CoreRpc.TestClient.csproj", "{BF73265B-A24F-4DBC-BCB7-8C0CD861FD93}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CoreRpc.UnitTests", "CoreRpc.UnitTests\CoreRpc.UnitTests.csproj", "{AAEFCF89-8D5B-49DD-A97C-DE45453A574A}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -32,6 +34,10 @@ Global
 		{BF73265B-A24F-4DBC-BCB7-8C0CD861FD93}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{BF73265B-A24F-4DBC-BCB7-8C0CD861FD93}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{BF73265B-A24F-4DBC-BCB7-8C0CD861FD93}.Release|Any CPU.Build.0 = Release|Any CPU
+		{AAEFCF89-8D5B-49DD-A97C-DE45453A574A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{AAEFCF89-8D5B-49DD-A97C-DE45453A574A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{AAEFCF89-8D5B-49DD-A97C-DE45453A574A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{AAEFCF89-8D5B-49DD-A97C-DE45453A574A}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{A7224166-C355-4083-9C81-0F19C980D9C9} = {1A93DA58-5733-452D-BB4B-CB0CD670BBFE}
