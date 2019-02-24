@@ -134,10 +134,6 @@ namespace CoreRpc.Networking.Rpc
 			{
 				try
 				{
-					/*
-					 * TODO: while(readMessage != EndOfSession)
-					 */
-					
 					var stream = GetNetworkStream();
 					var message = await stream.ReadMessageAsync();
 
@@ -156,7 +152,6 @@ namespace CoreRpc.Networking.Rpc
 					}
 
 					_logger.LogDebug("EndOfSession message received. Closing client.");
-					//TODO: Maybe this shouldn't be closed by server
 					stream.Close();
 				}
 				catch (Exception exception)

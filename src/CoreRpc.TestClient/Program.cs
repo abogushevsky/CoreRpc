@@ -23,7 +23,6 @@ namespace CoreRpc.TestClient
 
                 var messagePackSerializerFactory = new MessagePackSerializerFactory();
 
-                // TODO: client should implement IDisposable
                 using (var testServiceClient = ServiceClientFactory.CreateServiceClient<ITestService>(
                     "localhost",
                     logger,
