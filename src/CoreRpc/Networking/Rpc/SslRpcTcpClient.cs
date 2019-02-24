@@ -1,6 +1,7 @@
 using System.IO;
 using System.Net.Security;
 using System.Net.Sockets;
+using CoreRpc.Logging;
 using CoreRpc.Serialization;
 
 namespace CoreRpc.Networking.Rpc
@@ -11,8 +12,9 @@ namespace CoreRpc.Networking.Rpc
 			string hostName, 
 			int port, 
 			ISerializerFactory serializerFactory,
-			RemoteCertificateValidationCallback serverCertificateValidationCallback) : 
-			base(hostName, port, serializerFactory)
+			RemoteCertificateValidationCallback serverCertificateValidationCallback,
+			ILogger logger) : 
+			base(hostName, port, serializerFactory, logger)
 		{
 			_serverCertificateValidationCallback = serverCertificateValidationCallback;
 		}
@@ -22,8 +24,9 @@ namespace CoreRpc.Networking.Rpc
 			int port, 
 			ISerializerFactory serializerFactory,
 			RemoteCertificateValidationCallback serverCertificateValidationCallback,
-			LocalCertificateSelectionCallback clientCertificateSelectionCallback) : 
-			base(hostName, port, serializerFactory)
+			LocalCertificateSelectionCallback clientCertificateSelectionCallback,
+			ILogger logger) : 
+			base(hostName, port, serializerFactory, logger)
 		{
 			_serverCertificateValidationCallback = serverCertificateValidationCallback;
 			_clientCertificateSelectionCallback = clientCertificateSelectionCallback;

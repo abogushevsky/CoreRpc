@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
@@ -9,6 +10,9 @@ namespace CoreRpc.Networking
 	{
 		public static byte[] WithEndOfMessage(this byte[] originalMessageBytes) =>
 			originalMessageBytes.Concat(NetworkConstants.EndOfMessageBytes).ToArray();
+
+		public static void WriteEndOfSessionMessage(this Stream stream) => 
+			WriteMessage(stream, NetworkConstants.EndOfSessionMessageBytes);
 
 		public static void WriteMessage(this Stream stream, byte[] message)
 		{
@@ -24,22 +28,22 @@ namespace CoreRpc.Networking
 
 		public static byte[] ReadMessage(this Stream stream)
 		{
-			var recievedData = new List<byte>();
+			var receivedData = new List<byte>();
 			// ReSharper disable once RedundantAssignment actually it's not redundant
 			var bytesRead = -1;
 			do
 			{
 				var dataChunk = new byte[NetworkConstants.DataChunkSize];
 				bytesRead = stream.Read(dataChunk, 0, dataChunk.Length);
-				recievedData.AddRange(dataChunk.Take(bytesRead).ToArray());
+				receivedData.AddRange(dataChunk.Take(bytesRead).ToArray());
 
-				if (recievedData.ContainsEndOfMessage())
+				if (receivedData.ContainsEndOfMessage())
 				{
 					break;
 				}
 			} while (bytesRead != 0);
 
-			return recievedData.ToArray();
+			return receivedData.ToArray();
 		}
 		
 		public static async Task<byte[]> ReadMessageAsync(this Stream stream)
@@ -61,6 +65,11 @@ namespace CoreRpc.Networking
 
 			return receivedData.ToArray();
 		}
+
+		public static bool IsEndOfSessionMessage(this byte[] messageBytes) =>
+			messageBytes
+				.Take(messageBytes.Length - NetworkConstants.EndOfMessageBytes.Length)
+				.SequenceEqual(NetworkConstants.EndOfSessionMessageBytes);
 
 		private static bool ContainsEndOfMessage(this List<byte> messageBytes) =>
 			messageBytes
