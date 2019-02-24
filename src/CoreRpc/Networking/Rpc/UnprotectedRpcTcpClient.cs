@@ -1,5 +1,6 @@
 using System.IO;
 using System.Net.Sockets;
+using CoreRpc.Logging;
 using CoreRpc.Serialization;
 
 namespace CoreRpc.Networking.Rpc
@@ -10,7 +11,7 @@ namespace CoreRpc.Networking.Rpc
 			string hostName, 
 			int port, 
 			ISerializerFactory serializerFactory,
-			bool doUseSingleConnection) : base(hostName, port, serializerFactory)
+			ILogger logger) : base(hostName, port, serializerFactory, logger)
 		{
 		}
 

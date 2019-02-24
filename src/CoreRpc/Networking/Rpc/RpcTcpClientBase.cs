@@ -1,7 +1,9 @@
 using System;
 using System.IO;
 using System.Net.Sockets;
+using CoreRpc.Logging;
 using CoreRpc.Serialization;
+using CoreRpc.Utilities;
 
 namespace CoreRpc.Networking.Rpc
 {
@@ -10,10 +12,12 @@ namespace CoreRpc.Networking.Rpc
 		protected RpcTcpClientBase(
 			string hostName,
 			int port,
-			ISerializerFactory serializerFactory)
+			ISerializerFactory serializerFactory,
+			ILogger logger)
 		{
 			_hostName = hostName;
 			_port = port;
+			_logger = logger;
 			_serviceCallResultSerializer = serializerFactory.CreateSerializer<ServiceCallResult>();
 
 			_tcpClient = new TcpClient();
@@ -63,8 +67,16 @@ namespace CoreRpc.Networking.Rpc
 			if (_tcpClient.Connected)
 			{
 				// TODO: Execute safely
-				SendDataAndGetResult(_networkStream, NetworkConstants.EndOfSessionMessageBytes);
-				_tcpClient.Close();
+				ExceptionsHandlingHelper.ExecuteWithExceptionLogging(
+					() => SendDataAndGetResult(_networkStream, NetworkConstants.EndOfSessionMessageBytes),
+					_logger);
+				ExceptionsHandlingHelper.ExecuteWithExceptionLogging(
+					() =>
+					{
+						_networkStream.Dispose();
+						_tcpClient.Close();
+					},
+					_logger);
 			}	
 			
 			_tcpClient.Dispose();
@@ -73,6 +85,7 @@ namespace CoreRpc.Networking.Rpc
 		protected readonly string _hostName;
 		
 		private readonly int _port;
+		private readonly ILogger _logger;
 		private readonly ISerializer<ServiceCallResult> _serviceCallResultSerializer;
 		private readonly TcpClient _tcpClient;
 		private Stream _networkStream;
