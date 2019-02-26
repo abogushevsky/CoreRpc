@@ -58,7 +58,6 @@ namespace CoreRpc.Utilities
 
         private static bool IsCriticalException(Exception exception) =>
             exception is OutOfMemoryException ||
-            exception is AccessViolationException ||
-            exception is StackOverflowException;
+            exception is AccessViolationException;
     }
 }
