@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Net.Sockets;
 using CoreRpc.Logging;
+using CoreRpc.Networking.Rpc.Exceptions;
 using CoreRpc.Serialization;
 using CoreRpc.Utilities;
 
@@ -37,13 +38,24 @@ namespace CoreRpc.Networking.Rpc
 		{			
 			SendData(networkStream, data);
 
-			var serviceCallResult = _serviceCallResultSerializer.Deserialize(networkStream.ReadMessage());
-			if (serviceCallResult.HasException)
-			{
-				throw ExceptionsSerializer.Instance.Deserialize(serviceCallResult.Exception);
-			}
+			var messageFromServer = networkStream.ReadMessage();
 
-			return serviceCallResult;
+			try
+			{
+				var serviceCallResult = _serviceCallResultSerializer.Deserialize(messageFromServer);
+				if (serviceCallResult.HasException)
+				{
+					throw ExceptionsSerializer.Instance.Deserialize(serviceCallResult.Exception);
+				}
+
+				return serviceCallResult;
+			}
+			catch (Exception exception)
+			{
+				_logger.LogError(exception);
+				throw new CoreRpcCommunicationException(
+					$"Server doesn't provide a meanfull response. Original exception text {exception.Message}");
+			}
 		}
 
 		private static void SendData(Stream networkStream, byte[] data) => networkStream.WriteMessage(data);
@@ -52,13 +64,21 @@ namespace CoreRpc.Networking.Rpc
 		{
 			lock (_tcpClientSyncRoot)
 			{
-				if (!_tcpClient.Connected)
+				try
 				{
-					_tcpClient.Connect(_hostName, _port);
-					_networkStream = GetNetworkStreamFromTcpClient(_tcpClient);
-				}
+					if (!_tcpClient.Connected)
+					{
+						_tcpClient.Connect(_hostName, _port);
+						_networkStream = GetNetworkStreamFromTcpClient(_tcpClient);
+					}
 
-				return doWithNetworkStream(_networkStream);
+					return doWithNetworkStream(_networkStream);
+				}
+				catch (SocketException socketException)
+				{
+					_logger.LogError(socketException);
+					throw new CoreRpcCommunicationException($"Error dispatching a call to the server: {socketException.Message}");
+				}
 			}
 		}
 
