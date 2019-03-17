@@ -27,30 +27,39 @@ namespace TestClient
                     logger,
                     messagePackSerializerFactory))
                 {
-                    Console.WriteLine("Test service client created.");
-                    // Warm up
-                    const int warmUpCallsCount = 5000;
-                    Enumerable
-                        .Range(0, warmUpCallsCount)
-                        .ParallelForEach(_ => SendRequestAndLogResult(testServiceClient.ServiceInstance, logger));
+                    using (var wcfTestServiceClient = CommonWcfComponents.ServiceClient<ITestService>.Create())
+                    {
+                        Console.WriteLine("Test service client created.");
+                        
+                        RunTest(wcfTestServiceClient.Service, logger);
 
-                    Thread.Sleep(TimeSpan.FromSeconds(5));
+                        Helpers.LogCurrentMemoryUsage(logger);
 
-                    var stopwatch = new Stopwatch();
-                    stopwatch.Start();
-                    const int callsCount = 1000;
-                    Enumerable
-                        .Range(0, callsCount)
-                        .ParallelForEach(_ => SendRequestAndLogResult(testServiceClient.ServiceInstance, logger));
-                    stopwatch.Stop();
-                    Console.WriteLine($"Elapsed ms: {stopwatch.Elapsed.TotalMilliseconds}");
-
-                    Helpers.LogCurrentMemoryUsage(logger);
-
-                    Console.WriteLine("All requests send.");
-                    Console.ReadLine();
+                        Console.WriteLine("All requests send.");
+                        Console.ReadLine();
+                    }
                 }
             // }
+        }
+
+        private static void RunTest(ITestService testServiceClient, ILogger logger)
+        {
+            // Warm up
+            const int warmUpCallsCount = 5000;
+            Enumerable
+                .Range(0, warmUpCallsCount)
+                .ParallelForEach(_ => SendRequestAndLogResult(testServiceClient, logger));
+
+            Thread.Sleep(TimeSpan.FromSeconds(5));
+
+            var stopwatch = new Stopwatch();
+            stopwatch.Start();
+            const int callsCount = 1000;
+            Enumerable
+                .Range(0, callsCount)
+                .ParallelForEach(_ => SendRequestAndLogResult(testServiceClient, logger));
+            stopwatch.Stop();
+            Console.WriteLine($"Elapsed ms: {stopwatch.Elapsed.TotalMilliseconds}");
         }
 
         private static void SendRequestAndLogResult(ITestService testServiceClient, ILogger logger)

@@ -1,4 +1,5 @@
 ﻿using System;
+using CommonWcfComponents;
 using CoreRpc.Logging;
 using CoreRpc.Networking.Rpc;
 using CoreRpc.Serialization.MessagePack;
@@ -27,10 +28,13 @@ namespace TestServer
                         testService,
                         defaultServiceTimeout)))
                 {
-                    Console.WriteLine("Services started. Press Enter to stop.");
-                    Console.ReadLine();
-                    
-                    Helpers.LogCurrentMemoryUsage(logger);
+                    using (ServiceHostContainerFactory.Create<TestService, ITestService>())
+                    {
+                        Console.WriteLine("Services started. Press Enter to stop.");
+                        Console.ReadLine();
+
+                        Helpers.LogCurrentMemoryUsage(logger);
+                    }
                 }                
             // }
                        

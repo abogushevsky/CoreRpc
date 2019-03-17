@@ -5,7 +5,12 @@ using CoreRpc.Logging;
 namespace TestContract
 {
     public class TestService : ITestService
-    {        
+    {
+        public TestService() : this(new LoggerStub())
+        {
+
+        }
+
         public TestService(ILogger logger)
         {
             _logger = logger;

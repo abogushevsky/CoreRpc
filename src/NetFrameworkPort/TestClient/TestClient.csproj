@@ -66,6 +66,10 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\CommonWcfComponents\CommonWcfComponents.csproj">
+      <Project>{748520a2-1f3a-4dea-aa0a-da1e25f45066}</Project>
+      <Name>CommonWcfComponents</Name>
+    </ProjectReference>
     <ProjectReference Include="..\CoreRpc\CoreRpc.csproj">
       <Project>{B0EEBAA5-8DF3-49E7-87AE-4E5756E07C76}</Project>
       <Name>CoreRpc</Name>
