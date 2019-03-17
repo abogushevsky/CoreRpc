@@ -1,7 +1,8 @@
 using System;
 
-namespace CoreRpc.TestContract
+namespace TestContract
 {
+    [Serializable]
     public class TestData
     {
         public TestData()

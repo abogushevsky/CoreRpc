@@ -2,7 +2,7 @@ using System;
 using System.Diagnostics;
 using CoreRpc.Logging;
 
-namespace CoreRpc.TestContract
+namespace TestContract
 {
     public static class Helpers
     {

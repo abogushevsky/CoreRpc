@@ -2,7 +2,7 @@
 using System.Threading;
 using CoreRpc.Logging;
 
-namespace CoreRpc.TestContract
+namespace TestContract
 {
     public class TestService : ITestService
     {        

@@ -1,12 +1,11 @@
 ﻿using System;
-using System.Diagnostics;
 using CoreRpc.Logging;
 using CoreRpc.Networking.Rpc;
 using CoreRpc.Serialization.MessagePack;
-using CoreRpc.TestContract;
 using CoreRpc.Utilities;
+using TestContract;
 
-namespace CoreRpc.TestServer
+namespace TestServer
 {
     class Program
     {
@@ -16,7 +15,7 @@ namespace CoreRpc.TestServer
             // using (var logger = new ConsoleLoggerWrapper(new LoggerStub()))
             // {
                 Helpers.LogCurrentMemoryUsage(logger);
-                Console.ReadLine();
+                // Console.ReadLine();
                 
                 var messagePackSerializerFactory = new MessagePackSerializerFactory();
                 var rpcTcpServicePublisher = new RpcTcpServicePublisher(messagePackSerializerFactory, logger);

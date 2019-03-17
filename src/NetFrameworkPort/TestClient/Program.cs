@@ -1,16 +1,14 @@
 ﻿using System;
 using System.Diagnostics;
 using System.Linq;
-using System.Net;
 using System.Threading;
-using System.Threading.Tasks;
 using CoreRpc.Logging;
 using CoreRpc.Networking.Rpc;
 using CoreRpc.Serialization.MessagePack;
-using CoreRpc.TestContract;
 using CoreRpc.Utilities;
+using TestContract;
 
-namespace CoreRpc.TestClient
+namespace TestClient
 {
     class Program
     {
@@ -20,7 +18,7 @@ namespace CoreRpc.TestClient
             // using (var logger = new ConsoleLoggerWrapper(new LoggerStub()))
             // {
                 Helpers.LogCurrentMemoryUsage(logger);
-                Console.ReadLine();
+                // Console.ReadLine();
 
                 var messagePackSerializerFactory = new MessagePackSerializerFactory();
 
