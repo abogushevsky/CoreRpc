@@ -31,7 +31,7 @@ namespace CommonWcfComponents
         public static ServiceClient<TContract> Create(string addressPrefix = null)
         {
             var timeout = TimeSpan.FromMinutes(5);
-            var binding = new NetNamedPipeBinding(NetNamedPipeSecurityMode.None)
+            var binding = new NetTcpBinding(SecurityMode.None)
             {
                 CloseTimeout = timeout,
                 OpenTimeout = timeout,
@@ -50,8 +50,8 @@ namespace CommonWcfComponents
                 }
             };
             var endpointAddress = !string.IsNullOrEmpty(addressPrefix)
-                ? $"net.pipe://localhost/{addressPrefix}/{typeof(TContract).Name}"
-                : $"net.pipe://localhost/{typeof(TContract).Name}";
+                ? $"net.tcp://localhost/{addressPrefix}/{typeof(TContract).Name}"
+                : $"net.tcp://localhost/{typeof(TContract).Name}";
             var channelFactory = new ChannelFactory<TContract>(
                 binding,
                 new EndpointAddress(endpointAddress));

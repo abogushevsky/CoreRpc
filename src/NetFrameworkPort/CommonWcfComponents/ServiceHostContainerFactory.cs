@@ -14,9 +14,9 @@ namespace CommonWcfComponents
             try
             {
                 var host = new ServiceHost(typeof(TService),
-                    new Uri($"net.pipe://localhost/{addressPrefix ?? string.Empty}"));
+                    new Uri($"net.tcp://localhost/{addressPrefix ?? string.Empty}"));
                 var timeout = TimeSpan.FromMinutes(5);
-                var binding = new NetNamedPipeBinding(NetNamedPipeSecurityMode.None)
+                var binding = new NetTcpBinding(SecurityMode.None)
                 {
                     CloseTimeout = timeout,
                     OpenTimeout = timeout,
