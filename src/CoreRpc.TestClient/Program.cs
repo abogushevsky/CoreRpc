@@ -16,43 +16,46 @@ namespace CoreRpc.TestClient
     {
         static void Main(string[] args)
         {
-            using (var logger = new ConsoleLoggerWrapper(new LoggerStub()))
+            var logger = new LoggerStub();
+            // using (var logger = new ConsoleLoggerWrapper(new LoggerStub()))
+            // {
+            Helpers.LogCurrentMemoryUsage(logger);
+            Console.ReadLine();
+
+            var messagePackSerializerFactory = new MessagePackSerializerFactory();
+
+            using (var testServiceClient = ServiceClientFactory.CreateServiceClient<ITestService>(
+                "localhost",
+                logger,
+                messagePackSerializerFactory))
             {
+                Console.WriteLine("Test service client created.");
+
+                // Warm up
+                const int warmUpCallsCount = 5000;
+                Enumerable
+                    .Range(0, warmUpCallsCount)
+                    .ParallelForEach(_ => SendRequestAndLogResult(testServiceClient.ServiceInstance, logger));
+
+                Thread.Sleep(TimeSpan.FromSeconds(5));
+
+                var stopwatch = new Stopwatch();
+                stopwatch.Start();
+                const int callsCount = 1000;
+                Enumerable
+                    .Range(0, callsCount)
+                    .ParallelForEach(_ => SendRequestAndLogResult(testServiceClient.ServiceInstance, logger));
+                stopwatch.Stop();
+                // logger.LogInfo($"Elapsed ms: {stopwatch.Elapsed.TotalMilliseconds}");
+                Console.WriteLine($"Elapsed ms: {stopwatch.Elapsed.TotalMilliseconds}");
+
                 Helpers.LogCurrentMemoryUsage(logger);
+
+                Console.WriteLine("All requests send.");
                 Console.ReadLine();
-
-                var messagePackSerializerFactory = new MessagePackSerializerFactory();
-
-                using (var testServiceClient = ServiceClientFactory.CreateServiceClient<ITestService>(
-                    "localhost",
-                    logger,
-                    messagePackSerializerFactory))
-                {
-                    Console.WriteLine("Test service client created.");
-
-                    // Warm up
-                    const int warmUpCallsCount = 5000;
-                    Enumerable
-                        .Range(0, warmUpCallsCount)
-                        .ParallelForEach(_ => SendRequestAndLogResult(testServiceClient.ServiceInstance, logger));
-
-                    Thread.Sleep(TimeSpan.FromSeconds(5));
-
-                    var stopwatch = new Stopwatch();
-                    stopwatch.Start();
-                    const int callsCount = 1000;
-                    Enumerable
-                        .Range(0, callsCount)
-                        .ParallelForEach(_ => SendRequestAndLogResult(testServiceClient.ServiceInstance, logger));
-                    stopwatch.Stop();
-                    logger.LogInfo($"Elapsed ms: {stopwatch.Elapsed.TotalMilliseconds}");
-
-                    Helpers.LogCurrentMemoryUsage(logger);
-
-                    Console.WriteLine("All requests send.");
-                    Console.ReadLine();
-                }
             }
+
+            // }
         }
 
         private static void SendRequestAndLogResult(ITestService testServiceClient, ILogger logger)
