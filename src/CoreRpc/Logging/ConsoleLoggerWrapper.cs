@@ -114,7 +114,6 @@ namespace CoreRpc.Logging
 
 		private readonly ILogger _wrappedLogger;
 		private readonly ConcurrentQueue<Action> _consoleActionsQueue = new ConcurrentQueue<Action>();
-		private readonly object _consoleSyncRoot = new object();
 		private readonly AutoResetEvent _queueHandlerWaitHandle = new AutoResetEvent(false);
 		private bool _isDisposed;		
 	}
