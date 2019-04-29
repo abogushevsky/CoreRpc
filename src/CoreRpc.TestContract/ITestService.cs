@@ -1,3 +1,4 @@
+using System.Threading.Tasks;
 using CoreRpc.Networking.Rpc.ServiceAnnotations;
 
 namespace CoreRpc.TestContract
@@ -8,5 +9,9 @@ namespace CoreRpc.TestContract
         int SetTestData(TestData testData);
 
         TestData GetTestData();
+
+        Task<TestData> GetTestDataAsync();
+
+        Task TestAsync();
     }
 }

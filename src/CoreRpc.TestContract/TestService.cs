@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Threading;
+using System.Threading.Tasks;
 using CoreRpc.Logging;
 
 namespace CoreRpc.TestContract
@@ -22,6 +23,15 @@ namespace CoreRpc.TestContract
             IncrementAndLogCallsCount();
             return new TestData();
         }
+
+        public async Task<TestData> GetTestDataAsync()
+        {
+            IncrementAndLogCallsCount();
+            await Task.Delay(100);
+            return new TestData();
+        }
+
+        public async Task TestAsync() => await Task.Delay(100);
 
         private void IncrementAndLogCallsCount()
         {

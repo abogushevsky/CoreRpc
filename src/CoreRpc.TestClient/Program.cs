@@ -17,8 +17,6 @@ namespace CoreRpc.TestClient
         static void Main(string[] args)
         {
             var logger = new LoggerStub();
-            // using (var logger = new ConsoleLoggerWrapper(new LoggerStub()))
-            // {
             Helpers.LogCurrentMemoryUsage(logger);
             Console.ReadLine();
 
@@ -37,25 +35,42 @@ namespace CoreRpc.TestClient
                     .Range(0, warmUpCallsCount)
                     .ParallelForEach(_ => SendRequestAndLogResult(testServiceClient.ServiceInstance, logger));
 
+                GC.Collect(2, GCCollectionMode.Forced);
                 Thread.Sleep(TimeSpan.FromSeconds(5));
-
-                var stopwatch = new Stopwatch();
-                stopwatch.Start();
+                
                 const int callsCount = 1000;
-                Enumerable
-                    .Range(0, callsCount)
-                    .ParallelForEach(_ => SendRequestAndLogResult(testServiceClient.ServiceInstance, logger));
-                stopwatch.Stop();
-                // logger.LogInfo($"Elapsed ms: {stopwatch.Elapsed.TotalMilliseconds}");
-                Console.WriteLine($"Elapsed ms: {stopwatch.Elapsed.TotalMilliseconds}");
-
-                Helpers.LogCurrentMemoryUsage(logger);
+                RunTests(() => TestSyncOperations(testServiceClient.ServiceInstance, logger, callsCount), logger);
+                RunTests(() => TestAsyncOperations(testServiceClient.ServiceInstance, logger, callsCount), logger);
 
                 Console.WriteLine("All requests send.");
                 Console.ReadLine();
             }
+        }
 
-            // }
+        private static void RunTests(Action testsAction, ILogger logger)
+        {
+            var stopwatch = new Stopwatch();
+            stopwatch.Start();
+
+            testsAction();
+            
+            stopwatch.Stop();
+            logger.LogInfo($"Elapsed ms: {stopwatch.Elapsed.TotalMilliseconds}");
+            Console.WriteLine($"Elapsed ms: {stopwatch.Elapsed.TotalMilliseconds}");
+
+            Helpers.LogCurrentMemoryUsage(logger);
+        }
+
+        private static void TestAsyncOperations(ITestService testService, ILogger logger, int callsCount)
+        {
+            // TODO: call async methods
+        }
+
+        private static void TestSyncOperations(ITestService testService, ILogger logger, int callsCount)
+        {
+            Enumerable
+                .Range(0, callsCount)
+                .ParallelForEach(_ => SendRequestAndLogResult(testService, logger));
         }
 
         private static void SendRequestAndLogResult(ITestService testServiceClient, ILogger logger)
