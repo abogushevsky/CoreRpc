@@ -107,11 +107,8 @@ namespace CoreRpc.Logging
 				_queueHandlerWaitHandle.WaitOne();
 				while (_consoleActionsQueue.TryDequeue(out var consoleAction))
 				{
-					lock (_consoleSyncRoot)
-					{
-						consoleAction();
-					}
-				}											
+					consoleAction();
+				}
 			}
 		}
 
