@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
+using System.Threading.Tasks;
 using CoreRpc.Logging;
 using CoreRpc.Networking.Rpc.Exceptions;
 using CoreRpc.Networking.Rpc.ServiceAnnotations;
@@ -124,6 +125,22 @@ namespace CoreRpc.Networking.Rpc
 			{
 				throw new Exception("Service calls handlers construction failed", ex);
 			}
+		}
+
+		/*
+		 * The idea is to create async wrapper-function that will do the following:
+		 * 1) use pre-compiled lambda for parameters deserialization and service method call,
+		 * /// 2) use precompiled lambda for service implementation method call with async keyword
+		 * 3) use pre-compiled lambda to serialize result
+		 * Will see if all of this steps are possible.
+		 */
+		private async Task<ServiceCallResult> InvokeAsyncMethodCall<TResult>(
+			Func<Task<TResult>> serviceMethodCall,
+			Func<ServiceCallResult> resultCreationLambda)
+		{
+			var result = await serviceMethodCall();
+			var serializedResult = _serializerFactory.CreateSerializer<TResult>().Serialize(result);
+			return ServiceCallResult.CreateServiceCallResultWithReturnValue(serializedResult);
 		}
 
 		private readonly ISerializerFactory _serializerFactory;

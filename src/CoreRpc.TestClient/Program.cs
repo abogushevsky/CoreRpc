@@ -40,7 +40,7 @@ namespace CoreRpc.TestClient
                 
                 const int callsCount = 1000;
                 RunTests(() => TestSyncOperations(testServiceClient.ServiceInstance, logger, callsCount), logger);
-                RunTests(() => TestAsyncOperations(testServiceClient.ServiceInstance, logger, callsCount), logger);
+                RunTests(() => TestAsyncOperations(testServiceClient.ServiceInstance, logger, 1), logger);
 
                 Console.WriteLine("All requests send.");
                 Console.ReadLine();
@@ -63,7 +63,11 @@ namespace CoreRpc.TestClient
 
         private static void TestAsyncOperations(ITestService testService, ILogger logger, int callsCount)
         {
-            // TODO: call async methods
+            var tasks = Enumerable
+                .Range(0, callsCount)
+                .Select(_ => SendRequestAndLogResultAsync(testService, logger))
+                .ToArray();
+            Task.WaitAll(tasks);
         }
 
         private static void TestSyncOperations(ITestService testService, ILogger logger, int callsCount)
@@ -76,6 +80,13 @@ namespace CoreRpc.TestClient
         private static void SendRequestAndLogResult(ITestService testServiceClient, ILogger logger)
         {
             var result = testServiceClient.GetTestData();
+            logger.LogDebug($"Result of GetTestData: {result.Id}");
+            logger.LogDebug($"Result of SetTestData: {testServiceClient.SetTestData(new TestData())}");
+        }
+
+        private static async Task SendRequestAndLogResultAsync(ITestService testServiceClient, ILogger logger)
+        {
+            var result = await testServiceClient.GetTestDataAsync();
             logger.LogDebug($"Result of GetTestData: {result.Id}");
             logger.LogDebug($"Result of SetTestData: {testServiceClient.SetTestData(new TestData())}");
         }
