@@ -31,6 +31,23 @@ namespace CoreRpc.Networking.Rpc
 		public byte[] SendAndReceive(byte[] data) => 
 			ConnectAndSend(serviceCallResult => serviceCallResult.ReturnValue, data);
 		
+		public void Dispose()
+		{
+			if (_tcpClient.Connected)
+			{				
+				ExceptionsHandlingHelper.ExecuteWithExceptionLogging(
+					() => SendData(_networkStream, NetworkConstants.EndOfSessionMessageBytes),
+					() =>
+					{
+						_tcpClient.Close();
+						_networkStream.Dispose();
+					},
+					_logger);
+			}
+
+			_tcpClient.Dispose();
+		}
+		
 		private TResponse ConnectAndSend<TResponse>(Func<ServiceCallResult, TResponse> doWithServiceCallResult, byte[] data) => 
 			DoWithConnectedTcpClient(tcpClient => doWithServiceCallResult(SendDataAndGetResult(tcpClient, data)));
 
@@ -83,24 +100,7 @@ namespace CoreRpc.Networking.Rpc
 		}
 
 		protected abstract Stream GetNetworkStreamFromTcpClient(TcpClient tcpClient);
-		
-		public void Dispose()
-		{
-			if (_tcpClient.Connected)
-			{				
-				ExceptionsHandlingHelper.ExecuteWithExceptionLogging(
-					() => SendData(_networkStream, NetworkConstants.EndOfSessionMessageBytes),
-					() =>
-					{
-						_tcpClient.Close();
-						_networkStream.Dispose();
-					},
-					_logger);
-			}
 
-			_tcpClient.Dispose();
-		}
-		
 		protected readonly string _hostName;
 		
 		private readonly int _port;
