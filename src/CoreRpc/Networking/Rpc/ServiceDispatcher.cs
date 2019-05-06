@@ -91,28 +91,15 @@ namespace CoreRpc.Networking.Rpc
 				}
 
 				var serviceCall = Expression.Call(serviceInstanceParameter, methodInfo, parametersCalls);
-				Expression resultExpression;
+				Expression resultExpression = null;
 
-				if (methodInfo.ReturnType != typeof(void))
+				if (IsAsyncMethod(methodInfo))
 				{
-					resultExpression = Expression.Call(
-						type: typeof(ServiceCallResult),
-						methodName: nameof(ServiceCallResult.CreateServiceCallResultWithReturnValue),
-						typeArguments: null,
-						arguments: Expression.Call(
-							Expression.Call(
-								serializerFactoryParameter,
-								"CreateSerializer",
-								new[] {methodInfo.ReturnType}),
-							"Serialize",
-							null,
-							serviceCall));
+					CreateAsyncServiceCallExpression(methodInfo, serviceCall, serializerFactoryParameter);
 				}
 				else
 				{
-					resultExpression = Expression.Block(
-						serviceCall,
-						Expression.Call(typeof(ServiceCallResult), nameof(ServiceCallResult.GetVoidServiceCallResult), null, null));
+					resultExpression = CreateServiceMethodCallExpression(methodInfo, serviceCall, serializerFactoryParameter);
 				}
 
 				return Expression
@@ -126,6 +113,57 @@ namespace CoreRpc.Networking.Rpc
 				throw new Exception("Service calls handlers construction failed", ex);
 			}
 		}
+
+		private Expression CreateServiceMethodCallExpression(
+			MethodInfo methodInfo, 
+			Expression serviceCall, 
+			Expression serializerFactoryParameter)
+		{
+			Expression resultExpression;
+			if (methodInfo.ReturnType != typeof(void))
+			{
+				resultExpression = Expression.Call(
+					type: typeof(ServiceCallResult),
+					methodName: nameof(ServiceCallResult.CreateServiceCallResultWithReturnValue),
+					typeArguments: null,
+					arguments: Expression.Call(
+						Expression.Call(
+							serializerFactoryParameter,
+							"CreateSerializer",
+							new[] {methodInfo.ReturnType}),
+						"Serialize",
+						null,
+						serviceCall));
+			}
+			else
+			{
+				resultExpression = Expression.Block(
+					serviceCall,
+					Expression.Call(typeof(ServiceCallResult),
+						nameof(ServiceCallResult.GetVoidServiceCallResult), null, null));
+			}
+
+			return resultExpression;
+		}
+
+		private Expression CreateAsyncServiceCallExpression(
+			MethodInfo methodInfo, 
+			Expression serviceCall, 
+			Expression serializerFactoryParameter)
+		{
+			if (IsVoidAsyncMethod(methodInfo))
+			{
+				throw new NotImplementedException();			
+			}
+			else
+			{
+				throw new NotImplementedException();
+			}
+		}
+
+		private bool IsAsyncMethod(MethodInfo methodInfo) => methodInfo.ReturnType.IsAssignableFrom(typeof(Task));
+
+		private bool IsVoidAsyncMethod(MethodInfo methodInfo) => methodInfo.ReturnType == typeof(Task);
 
 		/*
 		 * The idea is to create async wrapper-function that will do the following:

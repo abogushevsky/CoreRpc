@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net.Sockets;
 using CoreRpc.Logging;
+using CoreRpc.Networking;
 using CoreRpc.Networking.Rpc;
 using CoreRpc.Serialization.MessagePack;
 using CoreRpc.UnitTests.TestData;
@@ -36,6 +37,7 @@ namespace CoreRpc.UnitTests
 					});
 
 					networkStream.Write(rpcMessage, 0, rpcMessage.Length);
+					networkStream.WriteEndOfSessionMessage();
 
 					var data = new List<byte>();
 					var dataChunk = new byte[128];
@@ -65,6 +67,7 @@ namespace CoreRpc.UnitTests
 					});
 
 					networkStream.Write(rpcMessage, 0, rpcMessage.Length);
+					networkStream.WriteEndOfSessionMessage();
 
 					var data = new List<byte>();
 					var dataChunk = new byte[128];
