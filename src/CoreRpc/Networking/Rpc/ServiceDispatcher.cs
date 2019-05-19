@@ -91,16 +91,10 @@ namespace CoreRpc.Networking.Rpc
 				}
 
 				var serviceCall = Expression.Call(serviceInstanceParameter, methodInfo, parametersCalls);
-				Expression resultExpression = null;
 
-				if (IsAsyncMethod(methodInfo))
-				{
-					CreateAsyncServiceCallExpression(methodInfo, serviceCall, serializerFactoryParameter);
-				}
-				else
-				{
-					resultExpression = CreateServiceMethodCallExpression(methodInfo, serviceCall, serializerFactoryParameter);
-				}
+				var resultExpression = IsAsyncMethod(methodInfo)
+					? CreateAsyncServiceCallExpression(methodInfo, serviceCall, serializerFactoryParameter)
+					: CreateServiceMethodCallExpression(methodInfo, serviceCall, serializerFactoryParameter);
 
 				return Expression
 					.Lambda<Func<TService, byte[][], ServiceCallResult>>(
