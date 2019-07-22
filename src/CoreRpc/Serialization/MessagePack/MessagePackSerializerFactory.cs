@@ -13,6 +13,7 @@ namespace CoreRpc.Serialization.MessagePack
         public ISerializer<T> CreateSerializer<T>() 
         {
             var cacheKey = typeof(T);
+            // TODO: Use GetOrCreate()
             if (!_cachedSerializers.TryGetValue(cacheKey, out object result))
             {
                 result = new MessagePackObjectSerializer<T>();
