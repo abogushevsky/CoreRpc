@@ -155,10 +155,6 @@ namespace CoreRpc.Networking.Rpc
 			}
 		}
 
-		private bool IsAsyncMethod(MethodInfo methodInfo) => methodInfo.ReturnType.IsAssignableFrom(typeof(Task));
-
-		private bool IsVoidAsyncMethod(MethodInfo methodInfo) => methodInfo.ReturnType == typeof(Task);
-
 		/*
 		 * The idea is to create async wrapper-function that will do the following:
 		 * 1) use pre-compiled lambda for parameters deserialization and service method call,
@@ -174,6 +170,10 @@ namespace CoreRpc.Networking.Rpc
 			var serializedResult = _serializerFactory.CreateSerializer<TResult>().Serialize(result);
 			return ServiceCallResult.CreateServiceCallResultWithReturnValue(serializedResult);
 		}
+		
+		private static bool IsAsyncMethod(MethodInfo methodInfo) => methodInfo.ReturnType.IsAssignableFrom(typeof(Task));
+
+		private static bool IsVoidAsyncMethod(MethodInfo methodInfo) => methodInfo.ReturnType == typeof(Task);
 
 		private readonly ISerializerFactory _serializerFactory;
 		private readonly ILogger _logger;
