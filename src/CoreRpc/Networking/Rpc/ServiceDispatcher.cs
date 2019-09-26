@@ -69,6 +69,29 @@ namespace CoreRpc.Networking.Rpc
 			}
 		}
 
+		// TODO: Maybe useless. Remove this and IsAsync property from RpcMessage
+		public async Task<ServiceCallResult> DispatchAsync(TService service, RpcMessage message)
+		{
+			if (!OperationCodesMap.TryGetValue(message.OperationCode, out var operation))
+			{
+				_logger.LogError(
+					$"Method with operation code {message.OperationCode} was not found in service with code {message.ServiceCode}");
+				return ServiceCallResult.CreateServiceCallResultWithException(
+					ExceptionsSerializer.Instance.Serialize(
+						new RpcDispatchingException(message.ServiceCode, message.OperationCode)));
+			}
+
+			try
+			{
+				throw new NotImplementedException();
+			}
+			catch (Exception exception)
+			{
+				return ServiceCallResult.CreateServiceCallResultWithException(
+					ExceptionsSerializer.Instance.Serialize(exception));
+			}
+		}
+
 		private Func<TService, byte[][], ServiceCallResult> CreateExpressionForMethod(MethodInfo methodInfo)
 		{
 			try
@@ -146,6 +169,8 @@ namespace CoreRpc.Networking.Rpc
 		 * /// 2) use precompiled lambda for service implementation method call with async keyword
 		 * 3) use pre-compiled lambda to serialize result
 		 * Will see if all of this steps are possible.
+		 *
+		 * TODO: Google for "How to Expression.Call async
 		 */
 		private Expression CreateAsyncServiceCallExpression(
 			MethodInfo methodInfo, 
