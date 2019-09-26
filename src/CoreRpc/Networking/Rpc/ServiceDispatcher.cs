@@ -92,7 +92,7 @@ namespace CoreRpc.Networking.Rpc
 
 				var serviceCall = Expression.Call(serviceInstanceParameter, methodInfo, parametersCalls);
 
-				var resultExpression = IsAsyncMethod(methodInfo)
+				var resultExpression = AsyncHelper.IsAsyncMethod(methodInfo)
 					? CreateAsyncServiceCallExpression(methodInfo, serviceCall, serializerFactoryParameter)
 					: CreateServiceMethodCallExpression(methodInfo, serviceCall, serializerFactoryParameter);
 
@@ -140,21 +140,6 @@ namespace CoreRpc.Networking.Rpc
 			return resultExpression;
 		}
 
-		private Expression CreateAsyncServiceCallExpression(
-			MethodInfo methodInfo, 
-			Expression serviceCall, 
-			Expression serializerFactoryParameter)
-		{
-			if (IsVoidAsyncMethod(methodInfo))
-			{
-				throw new NotImplementedException();			
-			}
-			else
-			{
-				throw new NotImplementedException();
-			}
-		}
-
 		/*
 		 * The idea is to create async wrapper-function that will do the following:
 		 * 1) use pre-compiled lambda for parameters deserialization and service method call,
@@ -162,6 +147,25 @@ namespace CoreRpc.Networking.Rpc
 		 * 3) use pre-compiled lambda to serialize result
 		 * Will see if all of this steps are possible.
 		 */
+		private Expression CreateAsyncServiceCallExpression(
+			MethodInfo methodInfo, 
+			Expression serviceCall, 
+			Expression serializerFactoryParameter)
+		{
+			Expression resultExpression;
+			
+			if (AsyncHelper.IsVoidAsyncMethod(methodInfo))
+			{
+				throw new NotImplementedException();			
+			}
+			else
+			{
+				throw new NotImplementedException();
+			}
+
+			return resultExpression;
+		}
+		
 		private async Task<ServiceCallResult> InvokeAsyncMethodCall<TResult>(
 			Func<Task<TResult>> serviceMethodCall,
 			Func<ServiceCallResult> resultCreationLambda)
@@ -170,10 +174,6 @@ namespace CoreRpc.Networking.Rpc
 			var serializedResult = _serializerFactory.CreateSerializer<TResult>().Serialize(result);
 			return ServiceCallResult.CreateServiceCallResultWithReturnValue(serializedResult);
 		}
-		
-		private static bool IsAsyncMethod(MethodInfo methodInfo) => methodInfo.ReturnType.IsAssignableFrom(typeof(Task));
-
-		private static bool IsVoidAsyncMethod(MethodInfo methodInfo) => methodInfo.ReturnType == typeof(Task);
 
 		private readonly ISerializerFactory _serializerFactory;
 		private readonly ILogger _logger;

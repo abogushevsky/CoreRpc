@@ -61,6 +61,9 @@ namespace CoreRpc.CodeGeneration
 					$"{rpcMessageInstanceVariableName}.{nameof(RpcMessage.OperationCode)}",
 					serviceDescriptor.GetOperationCodeByMethodInfo(methodInfo).ToString()),
 				CreateAssignmentStatement(
+					$"{rpcMessageInstanceVariableName}.{nameof(RpcMessage.IsAsyncOperation)}",
+					AsyncHelper.IsAsyncMethod(methodInfo).ToString()),
+				CreateAssignmentStatement(
 					$"{rpcMessageInstanceVariableName}.{nameof(RpcMessage.ArgumentsData)}",
 					$"{GetParametersSerializationCode(methodInfo.GetParameters().Select(parameterInfo => new MethodParameter(parameterInfo)).ToArray())}"),
 				SyntaxFactory.ParseStatement(GetRemoteCallCode(methodInfo)));
