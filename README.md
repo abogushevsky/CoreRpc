@@ -1,8 +1,8 @@
 ## CoreRpc
-A .NET Core library for rpc-style interprocess communication.
+A .NET Core library for rpc-style inter-process communication.
 
 ## Description
-The main point of this project is to try to implement some kind of analog of WCF for .NET Core. It allows to declare interface that will be used as service contract and use it on client side in same way if it was in-process object. All you need to do is to mark interface with special attribute, provide it's implemention on server side, launch server application with service instance created and the generate client and launch client application.
+The main point of this project is to try to implement some kind of analog of WCF for .NET Core. It allows to declare interface that will be used as service contract and use it on client side in same way if it was in-process object. All you need to do is to mark interface with special attribute, provide its implementation on server side, launch server application with service instance created and the generate client and launch client application.
 In opposite to WCF where developer had to create client implementation by himself or implement some kind of code-generation, CoreRpc can generate client automatically. It uses reflection and Roslyn API to generate class implementing service interface.
 
 ## Example
@@ -131,4 +131,4 @@ using (var serviceClient = ServiceClientFactory.CreateServiceClient<ITestService
 ```
 
 ## Releases
-Unfourtunately, project is not production ready. It doesn't support async methods and implementing it is the most important task for now. Also ILogger interface is not flexible enough and there are many other things that have to be done. 
+Unfortunately, project is not production ready. It doesn't support async methods and implementing it is the most important task for now. Also, ILogger interface is not flexible enough and there are many other things that have to be done.
