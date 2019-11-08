@@ -130,5 +130,5 @@ using (var serviceClient = ServiceClientFactory.CreateServiceClient<ITestService
 }
 ```
 
-##Releases
+## Releases
 Unfourtunately, project is not production ready. It doesn't support async methods and implementing it is the most important task for now. Also ILogger interface is not flexible enough and there are many other things that have to be done. 
