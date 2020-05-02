@@ -3,8 +3,7 @@ using CoreRpc.Networking.Rpc.ServiceAnnotations;
 
 namespace CoreRpc.UnitTests.TestData
 {
-    [Service(TestService.ServicePort)]
-    [SuppressMessage("ReSharper", "UnusedMember.Global", Justification = "Using in ExpressionTree")]
+    [Service(port: 57001)]
     public interface ITestService
     {
         int GetHashCodeOfMe(SerializableObject me);

@@ -67,7 +67,7 @@ namespace CoreRpc.Networking.Rpc
 					_logger.LogDebug($"{_serviceInstance.GetType()}: client connected. {client.Client.RemoteEndPoint}");
 					
 #pragma warning disable 4014
-					Task.Factory.StartNew(async () =>
+					ThreadPool.QueueUserWorkItem(async _ =>
 #pragma warning restore 4014
 					{
 						using (var handler = new ClientHandler(

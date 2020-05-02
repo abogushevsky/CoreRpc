@@ -34,6 +34,6 @@ namespace CoreRpc.UnitTests.TestData
 		}
 
 		private readonly Action _callback;
-		public const int ServicePort = 57002;
+		public const int ServicePort = 57001;
 	}
 }
