@@ -97,7 +97,18 @@ namespace CoreRpc.Networking.Rpc
 
 			try
 			{
-				throw new NotImplementedException();
+				var asyncOperationCallResult = operation(service, message.ArgumentsData);
+				
+				if (asyncOperationCallResult.IsVoid)
+				{
+					await asyncOperationCallResult.Task;
+					return ServiceCallResult.GetVoidServiceCallResult();
+				}
+
+				await asyncOperationCallResult.Task.ConfigureAwait(false);
+				var result = (object) ((dynamic) asyncOperationCallResult.Task).Result;
+				return ServiceCallResult.CreateServiceCallResultWithReturnValue(
+					asyncOperationCallResult.CreateSerializer().Serialize(result));
 			}
 			catch (Exception exception)
 			{
@@ -135,6 +146,7 @@ namespace CoreRpc.Networking.Rpc
 					throw new Exception("Default constructor for AsyncOperationCallResult was not found");
 				}
 
+				// TODO: create Expression for ISerializer<object>
 				var createAsyncServiceCallResultExpression = Expression.New(
 					asyncOperationCallResultConstructorInfo,
 					Expression.Call(serviceInstanceParameter, methodInfo, parametersCalls),
