@@ -1,14 +1,12 @@
 ﻿using System;
 using System.Diagnostics;
 using System.Linq;
-using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
 using CoreRpc.Logging;
 using CoreRpc.Networking.Rpc;
 using CoreRpc.Serialization.MessagePack;
 using CoreRpc.TestContract;
-using CoreRpc.Utilities;
 
 namespace CoreRpc.TestClient
 {

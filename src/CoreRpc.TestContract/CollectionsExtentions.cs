@@ -2,9 +2,9 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
-namespace CoreRpc.Utilities
+namespace CoreRpc.TestContract
 {
-	internal static class CollectionsExtentions
+	public static class CollectionsExtentions
 	{
 		public static void ForEach<T>(this IEnumerable<T> collection, Action<T> action)
 		{

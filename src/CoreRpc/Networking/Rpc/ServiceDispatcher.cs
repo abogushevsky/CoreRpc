@@ -25,12 +25,19 @@ namespace CoreRpc.Networking.Rpc
 
 			ServiceDescriptor = ServiceDescriptor.Of<TService>();
 			ServicePort = serviceType.GetCustomAttribute<ServiceAttribute>()?.Port ?? NetworkConstants.DefaultPort;
-			
-			OperationCodesMap = ServiceDescriptor.OperationNameCodeDictionary.Keys.ToDictionary(
-				keySelector: key => ServiceDescriptor
-					.OperationNameCodeDictionary[key],
-				elementSelector: operationName => CreateExpressionForMethod(
-					serviceMethods.Single(methodInfo => methodInfo.GetFullMethodName() == operationName)));
+
+			var (asyncMethods, syncMethods) = serviceMethods.Split(
+				methodInfo => methodInfo.ReturnType == typeof(Task) || methodInfo.ReturnType == typeof(Task<>));
+			var (asyncOperationNames, syncOperationNames) = 
+				ServiceDescriptor.OperationNameCodeDictionary.Keys
+				.Split(key => asyncMethods.Any(methodInfo => methodInfo.GetFullMethodName() == key));
+				
+
+			OperationCodesMap = syncOperationNames.ToDictionary(
+					keySelector: key => ServiceDescriptor
+						.OperationNameCodeDictionary[key],
+					elementSelector: operationName => CreateExpressionForMethod(
+						syncMethods.Single(methodInfo => methodInfo.GetFullMethodName() == operationName)));
 
 			_logger.LogDebug(
 				$@"Operations codes map construction for service {ServiceDescriptor.ServiceCode} 
@@ -39,6 +46,11 @@ namespace CoreRpc.Networking.Rpc
 							string.Empty,
 							(aggregatedString, next) => $"{aggregatedString} \n {next}")
 					}");
+
+			AsyncOperationCodesMap = asyncOperationNames.ToDictionary(
+				key => ServiceDescriptor.OperationNameCodeDictionary[key],
+				operationName => CreateExpressionForAsyncMethod(
+					asyncMethods.Single(methodInfo => methodInfo.GetFullMethodName() == operationName)));
 		}
 
 		private ServiceDescriptor ServiceDescriptor { get; }
@@ -46,6 +58,8 @@ namespace CoreRpc.Networking.Rpc
 		public int ServicePort { get; }
 
 		private IDictionary<int, Func<TService, byte[][], ServiceCallResult>> OperationCodesMap { get; }
+		
+		private IDictionary<int, Func<TService, byte[][], AsyncOperationCallResult>> AsyncOperationCodesMap { get; }
 
 		public ServiceCallResult Dispatch(TService serviceInstance, RpcMessage message)
 		{
@@ -72,7 +86,7 @@ namespace CoreRpc.Networking.Rpc
 		// TODO: Maybe useless. Remove this and IsAsync property from RpcMessage
 		public async Task<ServiceCallResult> DispatchAsync(TService service, RpcMessage message)
 		{
-			if (!OperationCodesMap.TryGetValue(message.OperationCode, out var operation))
+			if (!AsyncOperationCodesMap.TryGetValue(message.OperationCode, out var operation))
 			{
 				_logger.LogError(
 					$"Method with operation code {message.OperationCode} was not found in service with code {message.ServiceCode}");
@@ -89,6 +103,52 @@ namespace CoreRpc.Networking.Rpc
 			{
 				return ServiceCallResult.CreateServiceCallResultWithException(
 					ExceptionsSerializer.Instance.Serialize(exception));
+			}
+		}
+
+		private Func<TService, byte[][], AsyncOperationCallResult> CreateExpressionForAsyncMethod(MethodInfo methodInfo)
+		{
+			try
+			{
+				var serializerFactoryParameter = Expression.Constant(_serializerFactory);
+				var serviceInstanceParameter = Expression.Parameter(typeof(TService), "serviceInstance");
+				var messageDataParameter = Expression.Parameter(typeof(byte[][]), "messageData");
+
+				var methodParameters = methodInfo.GetParameters();
+				var parametersCalls = new MethodCallExpression[methodParameters.Length];
+				for (var i = 0; i < parametersCalls.Length; i++)
+				{
+					parametersCalls[i] = Expression.Call(Expression.Call(
+							serializerFactoryParameter,
+							nameof(ISerializerFactory.CreateSerializer),
+							new[] {methodParameters[i].ParameterType}),
+						nameof(ISerializer<TService>.Deserialize),
+						null,
+						Expression.ArrayIndex(messageDataParameter, Expression.Constant(i)));
+				}
+
+				var asyncOperationCallResultConstructorInfo =
+					typeof(AsyncOperationCallResult).GetConstructor(new[] {typeof(Task), typeof(bool)});
+
+				if (asyncOperationCallResultConstructorInfo == null)
+				{
+					throw new Exception("Default constructor for AsyncOperationCallResult was not found");
+				}
+
+				var createAsyncServiceCallResultExpression = Expression.New(
+					asyncOperationCallResultConstructorInfo,
+					Expression.Call(serviceInstanceParameter, methodInfo, parametersCalls),
+					Expression.Constant(methodInfo.ReturnType == typeof(Task)));
+
+				return Expression
+					.Lambda<Func<TService, byte[][], AsyncOperationCallResult>>(
+						createAsyncServiceCallResultExpression,
+						serviceInstanceParameter,
+						messageDataParameter).Compile();
+			}
+			catch (Exception ex)
+			{
+				throw new Exception("Service calls handlers construction failed", ex);
 			}
 		}
 
@@ -181,7 +241,7 @@ namespace CoreRpc.Networking.Rpc
 			
 			if (AsyncHelper.IsVoidAsyncMethod(methodInfo))
 			{
-				throw new NotImplementedException();			
+				throw new NotImplementedException();
 			}
 			else
 			{
