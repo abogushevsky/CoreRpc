@@ -46,7 +46,7 @@ namespace CoreRpc.Utilities
 		}
 
 		// TODO: Implement effectively
-		public static (IEnumerable<T>, IEnumerable<T>) Split<T>(this IEnumerable<T> collection, Func<T, bool> splitter)
+		public static (IEnumerable<T>, IEnumerable<T>) Partition<T>(this IEnumerable<T> collection, Func<T, bool> splitter)
 		{
 			var left = new List<T>();
 			var right = new List<T>();

@@ -26,11 +26,11 @@ namespace CoreRpc.Networking.Rpc
 			ServiceDescriptor = ServiceDescriptor.Of<TService>();
 			ServicePort = serviceType.GetCustomAttribute<ServiceAttribute>()?.Port ?? NetworkConstants.DefaultPort;
 
-			var (asyncMethods, syncMethods) = serviceMethods.Split(
+			var (asyncMethods, syncMethods) = serviceMethods.Partition(
 				methodInfo => methodInfo.ReturnType == typeof(Task) || methodInfo.ReturnType == typeof(Task<>));
 			var (asyncOperationNames, syncOperationNames) = 
 				ServiceDescriptor.OperationNameCodeDictionary.Keys
-				.Split(key => asyncMethods.Any(methodInfo => methodInfo.GetFullMethodName() == key));
+				.Partition(key => asyncMethods.Any(methodInfo => methodInfo.GetFullMethodName() == key));
 				
 
 			OperationCodesMap = syncOperationNames.ToDictionary(
