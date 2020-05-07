@@ -1,6 +1,5 @@
 using System;
 using System.Threading.Tasks;
-using CoreRpc.Serialization;
 
 namespace CoreRpc.Networking.Rpc
 {
@@ -12,24 +11,17 @@ namespace CoreRpc.Networking.Rpc
             IsVoid = true;
         }
 
-        public AsyncOperationCallResult(
-            Task task, 
-            bool isVoid, 
-            Type resultType,
-            Func<ISerializer<object>> createSerializer)
+        public AsyncOperationCallResult(Task task, Func<Task, ServiceCallResult> getResult)
         {
             Task = task;
-            IsVoid = isVoid;
-            ResultType = resultType;
-            CreateSerializer = createSerializer;
+            GetResult = getResult;
+            IsVoid = false;
         }
 
         public Task Task { get; }
         
-        public Type ResultType { get; }
-        
-        public Func<ISerializer<object>> CreateSerializer { get; }
-		
+        public Func<Task, ServiceCallResult> GetResult { get; }
+
         public bool IsVoid { get; }
     }
 }

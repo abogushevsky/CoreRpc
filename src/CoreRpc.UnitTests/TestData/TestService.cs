@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading.Tasks;
 
 namespace CoreRpc.UnitTests.TestData
 {
@@ -31,6 +32,23 @@ namespace CoreRpc.UnitTests.TestData
 		public (int count, SerializableObject[] objects) GetObjects(int offset, int count)
 		{
 			return (offset + count, new[] { SerializableObject.GetTestInstance() });
+		}
+
+		public Task<int> GetHashCodeOfMeAsync(SerializableObject me)
+		{
+			return Task.FromResult(GetHashCodeOfMe(me));
+		}
+
+		public async Task<SerializableObject> ConstructObjectAsync(int id, string name, double age)
+		{
+			await Task.Delay(1);
+			return ConstructObject(id, name, age);
+		}
+		
+		public async Task VoidMethodAsync(string someString)
+		{
+			await Task.Delay(1);
+			VoidMethod(someString);
 		}
 
 		private readonly Action _callback;

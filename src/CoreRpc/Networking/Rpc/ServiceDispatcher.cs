@@ -27,7 +27,7 @@ namespace CoreRpc.Networking.Rpc
 			ServicePort = serviceType.GetCustomAttribute<ServiceAttribute>()?.Port ?? NetworkConstants.DefaultPort;
 
 			var (asyncMethods, syncMethods) = serviceMethods.Partition(
-				methodInfo => methodInfo.ReturnType == typeof(Task) || methodInfo.ReturnType == typeof(Task<>));
+				methodInfo => typeof(Task).IsAssignableFrom(methodInfo.ReturnType));
 			var (asyncOperationNames, syncOperationNames) = 
 				ServiceDescriptor.OperationNameCodeDictionary.Keys
 				.Partition(key => asyncMethods.Any(methodInfo => methodInfo.GetFullMethodName() == key));
@@ -83,7 +83,6 @@ namespace CoreRpc.Networking.Rpc
 			}
 		}
 
-		// TODO: Maybe useless. Remove this and IsAsync property from RpcMessage
 		public async Task<ServiceCallResult> DispatchAsync(TService service, RpcMessage message)
 		{
 			if (!AsyncOperationCodesMap.TryGetValue(message.OperationCode, out var operation))
@@ -106,9 +105,7 @@ namespace CoreRpc.Networking.Rpc
 				}
 
 				await asyncOperationCallResult.Task.ConfigureAwait(false);
-				var result = (object) ((dynamic) asyncOperationCallResult.Task).Result;
-				return ServiceCallResult.CreateServiceCallResultWithReturnValue(
-					asyncOperationCallResult.CreateSerializer().Serialize(result));
+				return asyncOperationCallResult.GetResult(asyncOperationCallResult.Task);
 			}
 			catch (Exception exception)
 			{
@@ -138,19 +135,54 @@ namespace CoreRpc.Networking.Rpc
 						Expression.ArrayIndex(messageDataParameter, Expression.Constant(i)));
 				}
 
-				var asyncOperationCallResultConstructorInfo =
-					typeof(AsyncOperationCallResult).GetConstructor(new[] {typeof(Task), typeof(bool)});
-
-				if (asyncOperationCallResultConstructorInfo == null)
+				var isVoidResult = methodInfo.ReturnType == typeof(Task);
+				NewExpression createAsyncServiceCallResultExpression = null;
+				
+				if (!isVoidResult)
 				{
-					throw new Exception("Default constructor for AsyncOperationCallResult was not found");
-				}
+					var taskParameter = Expression.Parameter(typeof(Task), "task");
+					var taskGenericParameterType = methodInfo.ReturnType.GenericTypeArguments.First();
+					var getResultFromTaskExpression = Expression.Property(
+						Expression.Convert(taskParameter, typeof(Task<>).MakeGenericType(taskGenericParameterType)),
+						methodInfo.ReturnType,
+						"Result");
+					var serializeResultExpression = Expression.Call(
+						type: typeof(ServiceCallResult),
+						methodName: nameof(ServiceCallResult.CreateServiceCallResultWithReturnValue),
+						typeArguments: null,
+						arguments: Expression.Call(
+							Expression.Call(
+								serializerFactoryParameter,
+								"CreateSerializer",
+								new[] { taskGenericParameterType }),
+							"Serialize",
+							null,
+							getResultFromTaskExpression));
 
-				// TODO: create Expression for ISerializer<object>
-				var createAsyncServiceCallResultExpression = Expression.New(
-					asyncOperationCallResultConstructorInfo,
-					Expression.Call(serviceInstanceParameter, methodInfo, parametersCalls),
-					Expression.Constant(methodInfo.ReturnType == typeof(Task)));
+					var asyncOperationCallResultConstructorInfo =
+						typeof(AsyncOperationCallResult).GetConstructor(
+							new[] {typeof(Task), typeof(Func<Task, ServiceCallResult>)});
+					if (asyncOperationCallResultConstructorInfo == null)
+					{
+						throw new Exception("Target constructor for AsyncOperationCallResult was not found");
+					}
+					createAsyncServiceCallResultExpression = Expression.New(
+						asyncOperationCallResultConstructorInfo,
+						Expression.Call(serviceInstanceParameter, methodInfo, parametersCalls),
+						Expression.Lambda<Func<Task, ServiceCallResult>>(serializeResultExpression, taskParameter));
+				}
+				else
+				{
+					var asyncOperationCallResultConstructorInfo =
+						typeof(AsyncOperationCallResult).GetConstructor(new[] {typeof(Task)});
+					if (asyncOperationCallResultConstructorInfo == null)
+					{
+						throw new Exception("Target constructor for AsyncOperationCallResult was not found");
+					}
+					createAsyncServiceCallResultExpression = Expression.New(
+						asyncOperationCallResultConstructorInfo,
+						Expression.Call(serviceInstanceParameter, methodInfo, parametersCalls));
+				}
 
 				return Expression
 					.Lambda<Func<TService, byte[][], AsyncOperationCallResult>>(

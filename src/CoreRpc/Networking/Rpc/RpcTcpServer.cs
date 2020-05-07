@@ -140,7 +140,10 @@ namespace CoreRpc.Networking.Rpc
 					while (message.Any() && !message.IsEndOfSessionMessage())
 					{
 						var deserializedMessage = _messageSerializer.Deserialize(message);
-						var serviceCallResult = _serviceDispatcher.Dispatch(_serviceInstance, deserializedMessage);
+						ServiceCallResult serviceCallResult = deserializedMessage.IsAsyncOperation
+							? await _serviceDispatcher.DispatchAsync(_serviceInstance, deserializedMessage)
+							: _serviceDispatcher.Dispatch(_serviceInstance, deserializedMessage);
+
 						if (serviceCallResult.HasReturnValue || serviceCallResult.HasException)
 						{
 							var returnData = _serviceCallResultSerializer.Serialize(serviceCallResult);

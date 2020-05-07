@@ -1,4 +1,5 @@
-﻿using CoreRpc.Logging;
+﻿using System.Threading.Tasks;
+using CoreRpc.Logging;
 using CoreRpc.Networking.Rpc;
 using CoreRpc.Serialization;
 
@@ -81,7 +82,24 @@ namespace CoreRpc.UnitTests.TestData
 				_tcpClient.SendAndReceive(_serializerFactory.CreateSerializer<RpcMessage>().Serialize(rpcMessage));
 			return _serializerFactory.CreateSerializer<(int count, SerializableObject[] objects)>().Deserialize(remoteCallResult);
 		}
-		
+
+		public async Task VoidMethodAsync(string someString)
+		{
+			await Task.Delay(1);
+			VoidMethod(someString);
+		}
+
+		public Task<int> GetHashCodeOfMeAsync(SerializableObject me)
+		{
+			return Task.FromResult(GetHashCodeOfMe(me));
+		}
+
+		public async Task<SerializableObject> ConstructObjectAsync(int id, string name, double age)
+		{
+			await Task.Delay(1);
+			return ConstructObject(id, name, age);
+		}
+
 		private readonly ServiceDescriptor _serviceDescriptor;
 		private readonly ISerializerFactory _serializerFactory;
 		private readonly RpcTcpClientBase _tcpClient;
