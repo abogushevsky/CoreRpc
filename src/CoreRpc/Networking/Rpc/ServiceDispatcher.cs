@@ -118,27 +118,24 @@ namespace CoreRpc.Networking.Rpc
 		{
 			try
 			{
-				var serializerFactoryParameter = Expression.Constant(_serializerFactory);
-				var serviceInstanceParameter = Expression.Parameter(typeof(TService), "serviceInstance");
 				var messageDataParameter = Expression.Parameter(typeof(byte[][]), "messageData");
-
-				var methodParameters = methodInfo.GetParameters();
-				var parametersCalls = new MethodCallExpression[methodParameters.Length];
-				for (var i = 0; i < parametersCalls.Length; i++)
-				{
-					parametersCalls[i] = Expression.Call(Expression.Call(
-							serializerFactoryParameter,
-							nameof(ISerializerFactory.CreateSerializer),
-							new[] {methodParameters[i].ParameterType}),
-						nameof(ISerializer<TService>.Deserialize),
-						null,
-						Expression.ArrayIndex(messageDataParameter, Expression.Constant(i)));
-				}
-
-				var isVoidResult = methodInfo.ReturnType == typeof(Task);
-				NewExpression createAsyncServiceCallResultExpression = null;
+				var serviceInstanceParameter = Expression.Parameter(typeof(TService), "serviceInstance");
+				var serializerFactoryParameter = Expression.Constant(_serializerFactory);
+				var parametersCalls = 
+					CreateParametersCallExpression(methodInfo, serializerFactoryParameter, messageDataParameter);
 				
-				if (!isVoidResult)
+				NewExpression createAsyncServiceCallResultExpression;
+				var isVoidResult = methodInfo.ReturnType == typeof(Task);
+				if (isVoidResult)
+				{
+					var asyncOperationCallResultConstructorInfo =
+						FindAsyncOperationCallResultConstructor(new[] {typeof(Task)});
+
+					createAsyncServiceCallResultExpression = Expression.New(
+						asyncOperationCallResultConstructorInfo,
+						Expression.Call(serviceInstanceParameter, methodInfo, parametersCalls));
+				}
+				else
 				{
 					var taskParameter = Expression.Parameter(typeof(Task), "task");
 					var taskGenericParameterType = methodInfo.ReturnType.GenericTypeArguments.First();
@@ -154,34 +151,18 @@ namespace CoreRpc.Networking.Rpc
 							Expression.Call(
 								serializerFactoryParameter,
 								"CreateSerializer",
-								new[] { taskGenericParameterType }),
+								new[] {taskGenericParameterType}),
 							"Serialize",
 							null,
 							getResultFromTaskExpression));
 
-					var asyncOperationCallResultConstructorInfo =
-						typeof(AsyncOperationCallResult).GetConstructor(
-							new[] {typeof(Task), typeof(Func<Task, ServiceCallResult>)});
-					if (asyncOperationCallResultConstructorInfo == null)
-					{
-						throw new Exception("Target constructor for AsyncOperationCallResult was not found");
-					}
+					var asyncOperationCallResultConstructorInfo = FindAsyncOperationCallResultConstructor(
+						new[] {typeof(Task), typeof(Func<Task, ServiceCallResult>)});
+
 					createAsyncServiceCallResultExpression = Expression.New(
 						asyncOperationCallResultConstructorInfo,
 						Expression.Call(serviceInstanceParameter, methodInfo, parametersCalls),
 						Expression.Lambda<Func<Task, ServiceCallResult>>(serializeResultExpression, taskParameter));
-				}
-				else
-				{
-					var asyncOperationCallResultConstructorInfo =
-						typeof(AsyncOperationCallResult).GetConstructor(new[] {typeof(Task)});
-					if (asyncOperationCallResultConstructorInfo == null)
-					{
-						throw new Exception("Target constructor for AsyncOperationCallResult was not found");
-					}
-					createAsyncServiceCallResultExpression = Expression.New(
-						asyncOperationCallResultConstructorInfo,
-						Expression.Call(serviceInstanceParameter, methodInfo, parametersCalls));
 				}
 
 				return Expression
@@ -200,32 +181,16 @@ namespace CoreRpc.Networking.Rpc
 		{
 			try
 			{
-				var serializerFactoryParameter = Expression.Constant(_serializerFactory);
-				var serviceInstanceParameter = Expression.Parameter(typeof(TService), "serviceInstance");
 				var messageDataParameter = Expression.Parameter(typeof(byte[][]), "messageData");
-
-				var methodParameters = methodInfo.GetParameters();
-				var parametersCalls = new MethodCallExpression[methodParameters.Length];
-				for (var i = 0; i < parametersCalls.Length; i++)
-				{
-					parametersCalls[i] = Expression.Call(Expression.Call(
-							serializerFactoryParameter,
-							nameof(ISerializerFactory.CreateSerializer),
-							new[] {methodParameters[i].ParameterType}),
-						nameof(ISerializer<TService>.Deserialize),
-						null,
-						Expression.ArrayIndex(messageDataParameter, Expression.Constant(i)));
-				}
-
+				var serviceInstanceParameter = Expression.Parameter(typeof(TService), "serviceInstance");
+				var serializerFactoryParameter = Expression.Constant(_serializerFactory);
+				var parametersCalls = 
+					CreateParametersCallExpression(methodInfo, serializerFactoryParameter, messageDataParameter);
 				var serviceCall = Expression.Call(serviceInstanceParameter, methodInfo, parametersCalls);
-
-				var resultExpression = AsyncHelper.IsAsyncMethod(methodInfo)
-					? CreateAsyncServiceCallExpression(methodInfo, serviceCall, serializerFactoryParameter)
-					: CreateServiceMethodCallExpression(methodInfo, serviceCall, serializerFactoryParameter);
 
 				return Expression
 					.Lambda<Func<TService, byte[][], ServiceCallResult>>(
-						resultExpression,
+						CreateServiceMethodCallExpression(methodInfo, serviceCall, serializerFactoryParameter),
 						serviceInstanceParameter,
 						messageDataParameter).Compile();
 			}
@@ -234,8 +199,39 @@ namespace CoreRpc.Networking.Rpc
 				throw new Exception("Service calls handlers construction failed", ex);
 			}
 		}
+		
+		private static MethodCallExpression[] CreateParametersCallExpression(
+			MethodInfo methodInfo, 
+			Expression serializerFactoryParameter,
+			Expression messageDataParameter)
+		{
+			var methodParameters = methodInfo.GetParameters();
+			var parametersCalls = new MethodCallExpression[methodParameters.Length];
+			for (var i = 0; i < parametersCalls.Length; i++)
+			{
+				parametersCalls[i] = Expression.Call(Expression.Call(
+						serializerFactoryParameter,
+						nameof(ISerializerFactory.CreateSerializer),
+						new[] {methodParameters[i].ParameterType}),
+					nameof(ISerializer<TService>.Deserialize),
+					null,
+					Expression.ArrayIndex(messageDataParameter, Expression.Constant(i)));
+			}
 
-		private Expression CreateServiceMethodCallExpression(
+			return parametersCalls;
+		}
+		
+		private static ConstructorInfo FindAsyncOperationCallResultConstructor(Type[] argumentTypes)
+		{
+			var result = typeof(AsyncOperationCallResult).GetConstructor(argumentTypes);
+			if (result == null)
+			{
+				throw new Exception("Target constructor for AsyncOperationCallResult was not found");
+			}
+			return result;
+		}
+
+		private static Expression CreateServiceMethodCallExpression(
 			MethodInfo methodInfo, 
 			Expression serviceCall, 
 			Expression serializerFactoryParameter)
@@ -265,43 +261,6 @@ namespace CoreRpc.Networking.Rpc
 			}
 
 			return resultExpression;
-		}
-
-		/*
-		 * The idea is to create async wrapper-function that will do the following:
-		 * 1) use pre-compiled lambda for parameters deserialization and service method call,
-		 * /// 2) use precompiled lambda for service implementation method call with async keyword
-		 * 3) use pre-compiled lambda to serialize result
-		 * Will see if all of this steps are possible.
-		 *
-		 * TODO: Google for "How to Expression.Call async
-		 */
-		private Expression CreateAsyncServiceCallExpression(
-			MethodInfo methodInfo, 
-			Expression serviceCall, 
-			Expression serializerFactoryParameter)
-		{
-			Expression resultExpression;
-			
-			if (AsyncHelper.IsVoidAsyncMethod(methodInfo))
-			{
-				throw new NotImplementedException();
-			}
-			else
-			{
-				throw new NotImplementedException();
-			}
-
-			return resultExpression;
-		}
-		
-		private async Task<ServiceCallResult> InvokeAsyncMethodCall<TResult>(
-			Func<Task<TResult>> serviceMethodCall,
-			Func<ServiceCallResult> resultCreationLambda)
-		{
-			var result = await serviceMethodCall();
-			var serializedResult = _serializerFactory.CreateSerializer<TResult>().Serialize(result);
-			return ServiceCallResult.CreateServiceCallResultWithReturnValue(serializedResult);
 		}
 
 		private readonly ISerializerFactory _serializerFactory;
