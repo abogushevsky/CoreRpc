@@ -30,12 +30,17 @@ namespace CoreRpc.UnitTests
 			
 			Assert.NotNull(result);
 			Assert.True(result.HasReturnValue);
-			Assert.Equal(testObject.IntProperty, serializerFactory.CreateSerializer<int>().Deserialize(result.ReturnValue));
+			Assert.Equal(
+				testObject.IntProperty, 
+				serializerFactory.CreateSerializer<int>().Deserialize(result.ReturnValue));
 
 			argumentsData = new byte[3][];
-			argumentsData[0] = serializerFactory.CreateSerializer<int>().Serialize(SerializableObject.TestInt);
-			argumentsData[1] = serializerFactory.CreateSerializer<string>().Serialize(SerializableObject.TestString);
-			argumentsData[2] = serializerFactory.CreateSerializer<double>().Serialize(SerializableObject.TestDouble);
+			argumentsData[0] = serializerFactory.CreateSerializer<int>()
+				.Serialize(SerializableObject.TestInt);
+			argumentsData[1] = serializerFactory.CreateSerializer<string>()
+				.Serialize(SerializableObject.TestString);
+			argumentsData[2] = serializerFactory.CreateSerializer<double>()
+				.Serialize(SerializableObject.TestDouble);
 			
 			result = serviceDispatcher.Dispatch(serviceInstance, new RpcMessage
 			{
@@ -46,14 +51,18 @@ namespace CoreRpc.UnitTests
 
 			Assert.NotNull(result);
 			Assert.True(result.HasReturnValue);
-			var resultObject = serializerFactory.CreateSerializer<SerializableObject>().Deserialize(result.ReturnValue);
+			var resultObject = serializerFactory.CreateSerializer<SerializableObject>()
+				.Deserialize(result.ReturnValue);
 			Assert.NotNull(resultObject);
 			Assert.Equal(testObject.IntProperty, resultObject.IntProperty);
 			Assert.Equal(testObject.StringProperty, resultObject.StringProperty);
-			Assert.Equal(testObject.NestedObject.DoubleProperty, resultObject.NestedObject.DoubleProperty);
+			Assert.Equal(
+				testObject.NestedObject.DoubleProperty, 
+				resultObject.NestedObject.DoubleProperty);
 			
 			argumentsData = new byte[1][];
-			argumentsData[0] = serializerFactory.CreateSerializer<string>().Serialize(SerializableObject.TestString);
+			argumentsData[0] = serializerFactory.CreateSerializer<string>()
+				.Serialize(SerializableObject.TestString);
 			
 			result = serviceDispatcher.Dispatch(serviceInstance, new RpcMessage
 			{
@@ -88,11 +97,14 @@ namespace CoreRpc.UnitTests
 
 			Assert.NotNull(result);
 			Assert.True(result.HasReturnValue);
-			var resultTuple = serializerFactory.CreateSerializer<(int count , SerializableObject[] objects)>().Deserialize(result.ReturnValue);
+			var resultTuple = serializerFactory.CreateSerializer<(int count , SerializableObject[] objects)>()
+				.Deserialize(result.ReturnValue);
 			Assert.Equal(2, resultTuple.count);
 			Assert.Equal(SerializableObject.TestInt, resultTuple.objects[0].IntProperty);
 			Assert.Equal(SerializableObject.TestString, resultTuple.objects[0].StringProperty);
-			Assert.Equal(SerializableObject.TestDouble, resultTuple.objects[0].NestedObject.DoubleProperty);
+			Assert.Equal(
+				SerializableObject.TestDouble, 
+				resultTuple.objects[0].NestedObject.DoubleProperty);
 		}
 
 		[Fact]
@@ -122,9 +134,12 @@ namespace CoreRpc.UnitTests
 				serializerFactory.CreateSerializer<int>().Deserialize(result.ReturnValue));
 			
 			argumentsData = new byte[3][];
-			argumentsData[0] = serializerFactory.CreateSerializer<int>().Serialize(SerializableObject.TestInt);
-			argumentsData[1] = serializerFactory.CreateSerializer<string>().Serialize(SerializableObject.TestString);
-			argumentsData[2] = serializerFactory.CreateSerializer<double>().Serialize(SerializableObject.TestDouble);
+			argumentsData[0] = serializerFactory.CreateSerializer<int>()
+				.Serialize(SerializableObject.TestInt);
+			argumentsData[1] = serializerFactory.CreateSerializer<string>()
+				.Serialize(SerializableObject.TestString);
+			argumentsData[2] = serializerFactory.CreateSerializer<double>()
+				.Serialize(SerializableObject.TestDouble);
 			
 			result = await serviceDispatcher.DispatchAsync(serviceInstance, new RpcMessage
 			{
@@ -139,10 +154,13 @@ namespace CoreRpc.UnitTests
 			Assert.NotNull(resultObject);
 			Assert.Equal(testObject.IntProperty, resultObject.IntProperty);
 			Assert.Equal(testObject.StringProperty, resultObject.StringProperty);
-			Assert.Equal(testObject.NestedObject.DoubleProperty, resultObject.NestedObject.DoubleProperty);
+			Assert.Equal(
+				testObject.NestedObject.DoubleProperty, 
+				resultObject.NestedObject.DoubleProperty);
 			
 			argumentsData = new byte[1][];
-			argumentsData[0] = serializerFactory.CreateSerializer<string>().Serialize(SerializableObject.TestString);
+			argumentsData[0] = serializerFactory.CreateSerializer<string>()
+				.Serialize(SerializableObject.TestString);
 			
 			result = await serviceDispatcher.DispatchAsync(serviceInstance, new RpcMessage
 			{
