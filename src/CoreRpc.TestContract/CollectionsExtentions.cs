@@ -2,9 +2,9 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
-namespace CoreRpc.Utilities
+namespace CoreRpc.TestContract
 {
-	internal static class CollectionsExtentions
+	public static class CollectionsExtentions
 	{
 		public static void ForEach<T>(this IEnumerable<T> collection, Action<T> action)
 		{
@@ -46,7 +46,7 @@ namespace CoreRpc.Utilities
 		}
 
 		// TODO: Implement effectively
-		public static (IEnumerable<T>, IEnumerable<T>) Partition<T>(this IEnumerable<T> collection, Func<T, bool> splitter)
+		public static (IEnumerable<T>, IEnumerable<T>) Split<T>(this IEnumerable<T> collection, Func<T, bool> splitter)
 		{
 			var left = new List<T>();
 			var right = new List<T>();

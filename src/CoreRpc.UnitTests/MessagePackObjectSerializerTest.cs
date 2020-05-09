@@ -123,6 +123,6 @@ namespace CoreRpc.UnitTests
 
 		private const string TestString = "Test string";
 		private const int TestInt = 7;
-		private const double TestDouble = 3.14;
+		private const double TestDouble = Math.PI;
 	}
 }

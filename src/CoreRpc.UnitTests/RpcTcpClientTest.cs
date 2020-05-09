@@ -1,5 +1,5 @@
 ﻿using System;
-using System.ComponentModel.DataAnnotations;
+using System.Linq;
 using CoreRpc.Logging;
 using CoreRpc.Networking.Rpc;
 using CoreRpc.Serialization;
@@ -12,10 +12,10 @@ namespace CoreRpc.UnitTests
 	public sealed class RpcTcpClientTest
 	{
 		[Fact]
-		public void ClientTest()
+		public void SyncClientMethodsTest()
 		{
 			var serializerFactory = new MessagePackSerializerFactory();
-			using (var server = GetTestService(serializerFactory))
+			using (var _ = GetTestService(serializerFactory))
 			{
 				using (var client = ServiceClientFactory.CreateServiceClient<ITestService>(
 					"localhost",
@@ -31,6 +31,41 @@ namespace CoreRpc.UnitTests
 						SerializableObject.TestString,
 						SerializableObject.TestDouble);
 					Assert.NotNull(constructedObject);
+					Assert.Equal(SerializableObject.TestInt, constructedObject.IntProperty);
+					Assert.Equal(SerializableObject.TestString, constructedObject.StringProperty);
+					Assert.Equal(SerializableObject.TestDouble, constructedObject.NestedObject.DoubleProperty);
+				}
+			}
+		}
+
+		[Fact]
+		public async void AsyncClientMethodsTest()
+		{
+			var serializerFactory = new MessagePackSerializerFactory();
+			using (var _ = GetTestService(serializerFactory))
+			{
+				using (var client = ServiceClientFactory.CreateServiceClient<ITestService>(
+					"localhost",
+					new LoggerStub(),
+					serializerFactory))
+				{
+
+					var myHashcode = await client.ServiceInstance.GetHashCodeOfMeAsync(SerializableObject.GetTestInstance());
+					Assert.Equal(SerializableObject.TestInt, myHashcode);
+
+					var constructedObject = await client.ServiceInstance.ConstructObjectAsync(
+						SerializableObject.TestInt,
+						SerializableObject.TestString,
+						SerializableObject.TestDouble);
+					Assert.NotNull(constructedObject);
+					Assert.Equal(SerializableObject.TestInt, constructedObject.IntProperty);
+					Assert.Equal(SerializableObject.TestString, constructedObject.StringProperty);
+					Assert.Equal(SerializableObject.TestDouble, constructedObject.NestedObject.DoubleProperty);
+
+					var constructedTuple = await client.ServiceInstance.GetObjectsAsync(1, 1);
+					Assert.NotNull(constructedTuple);
+					Assert.Equal(2, constructedTuple.count);
+					constructedObject = constructedTuple.objects.Single();
 					Assert.Equal(SerializableObject.TestInt, constructedObject.IntProperty);
 					Assert.Equal(SerializableObject.TestString, constructedObject.StringProperty);
 					Assert.Equal(SerializableObject.TestDouble, constructedObject.NestedObject.DoubleProperty);

@@ -1,6 +1,7 @@
 using System.IO;
 using System.Net.Security;
 using System.Net.Sockets;
+using System.Threading.Tasks;
 using CoreRpc.Logging;
 using CoreRpc.Serialization;
 
@@ -32,7 +33,7 @@ namespace CoreRpc.Networking.Rpc
 			_clientCertificateSelectionCallback = clientCertificateSelectionCallback;
 		}
 
-		protected override Stream GetNetworkStreamFromTcpClient(TcpClient tcpClient)
+		protected override async Task<Stream> GetNetworkStreamFromTcpClientAsync(TcpClient tcpClient)
 		{
 			var sslStream = new SslStream(
 				tcpClient.GetStream(), 
@@ -40,7 +41,7 @@ namespace CoreRpc.Networking.Rpc
 				userCertificateValidationCallback: _serverCertificateValidationCallback, 
 				userCertificateSelectionCallback: _clientCertificateSelectionCallback);
 			
-			sslStream.AuthenticateAsClient(_hostName); // TODO: select client cert
+			await sslStream.AuthenticateAsClientAsync(_hostName); // TODO: select client cert
 			return sslStream;
 		}
 		

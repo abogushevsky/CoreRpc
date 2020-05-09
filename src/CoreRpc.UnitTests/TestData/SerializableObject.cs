@@ -24,7 +24,7 @@ namespace CoreRpc.UnitTests.TestData
 		
 		public const string TestString = "Test string";
 		public const int TestInt = 7;
-		public const double TestDouble = 3.14;
+		public const double TestDouble = Math.PI;
 	}
 	
 	[Serializable]
