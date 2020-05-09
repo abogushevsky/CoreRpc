@@ -4,7 +4,7 @@ using System.Threading.Tasks;
 
 namespace CoreRpc.TestContract
 {
-	public static class CollectionsExtentions
+	internal static class CollectionsExtentions
 	{
 		public static void ForEach<T>(this IEnumerable<T> collection, Action<T> action)
 		{

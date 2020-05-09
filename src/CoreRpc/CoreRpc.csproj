@@ -2,7 +2,7 @@
 
     <PropertyGroup>
         <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
-        <PackageVersion>0.0.3</PackageVersion>
+        <PackageVersion>0.0.4</PackageVersion>
         <Authors>Anton Bogushevsky</Authors>
         <Title>JustRpc</Title>
         <PackageProjectUrl>https://github.com/abogushevsky/CoreRpc</PackageProjectUrl>
