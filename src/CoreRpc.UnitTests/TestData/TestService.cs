@@ -1,8 +1,10 @@
 ﻿using System;
+using System.Diagnostics.CodeAnalysis;
 using System.Threading.Tasks;
 
 namespace CoreRpc.UnitTests.TestData
 {
+	[SuppressMessage("ReSharper", "MethodHasAsyncOverload")]
 	public class TestService : ITestService
 	{
 		public TestService(Action callback)
@@ -44,7 +46,13 @@ namespace CoreRpc.UnitTests.TestData
 			await Task.Delay(1);
 			return ConstructObject(id, name, age);
 		}
-		
+
+		public async Task<(int count, SerializableObject[] objects)> GetObjectsAsync(int offset, int count)
+		{
+			await Task.Delay(1);
+			return GetObjects(offset, count);
+		}
+
 		public async Task VoidMethodAsync(string someString)
 		{
 			await Task.Delay(1);

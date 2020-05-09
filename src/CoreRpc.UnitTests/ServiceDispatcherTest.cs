@@ -1,4 +1,5 @@
-﻿using CoreRpc.Logging;
+﻿using System.Diagnostics.CodeAnalysis;
+using CoreRpc.Logging;
 using CoreRpc.Networking.Rpc;
 using CoreRpc.Serialization.MessagePack;
 using CoreRpc.UnitTests.TestData;
@@ -7,6 +8,7 @@ using Xunit;
 namespace CoreRpc.UnitTests
 {
 	// TODO: Split tests into smaller ones
+	[SuppressMessage("ReSharper", "PossibleNullReferenceException")]
 	public class ServiceDispatcherTest
 	{
 		[Fact]
@@ -165,13 +167,44 @@ namespace CoreRpc.UnitTests
 			result = await serviceDispatcher.DispatchAsync(serviceInstance, new RpcMessage
 			{
 				ServiceCode = typeof(ITestService).FullName.GetHashCode(),
-				OperationCode = 6,
+				OperationCode = 7,
 				ArgumentsData = argumentsData
 			});
 			
 			Assert.NotNull(result);
 			Assert.False(result.HasReturnValue);
 			Assert.Equal(1, callsCount);
+		}
+		
+		[Fact]
+		public async void ReturnTupleAsyncTest()
+		{
+			var callsCount = 0;
+			var serviceInstance = new TestService(() => callsCount++);
+			var serializerFactory = new MessagePackSerializerFactory();
+			var serviceDispatcher = new ServiceDispatcher<ITestService>(serializerFactory, new LoggerStub());
+
+			var argumentsData = new byte[2][];
+			argumentsData[0] = serializerFactory.CreateSerializer<int>().Serialize(0);
+			argumentsData[1] = serializerFactory.CreateSerializer<int>().Serialize(2);
+
+			var result = await serviceDispatcher.DispatchAsync(serviceInstance, new RpcMessage()
+			{
+				ServiceCode = typeof(ITestService).FullName.GetHashCode(),
+				OperationCode = 6,
+				ArgumentsData = argumentsData
+			});
+
+			Assert.NotNull(result);
+			Assert.True(result.HasReturnValue);
+			var resultTuple = serializerFactory.CreateSerializer<(int count , SerializableObject[] objects)>()
+				.Deserialize(result.ReturnValue);
+			Assert.Equal(2, resultTuple.count);
+			Assert.Equal(SerializableObject.TestInt, resultTuple.objects[0].IntProperty);
+			Assert.Equal(SerializableObject.TestString, resultTuple.objects[0].StringProperty);
+			Assert.Equal(
+				SerializableObject.TestDouble, 
+				resultTuple.objects[0].NestedObject.DoubleProperty);
 		}
 	}
 }

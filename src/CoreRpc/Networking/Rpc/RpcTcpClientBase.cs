@@ -1,6 +1,8 @@
 using System;
 using System.IO;
 using System.Net.Sockets;
+using System.Threading;
+using System.Threading.Tasks;
 using CoreRpc.Logging;
 using CoreRpc.Networking.Rpc.Exceptions;
 using CoreRpc.Serialization;
@@ -25,37 +27,57 @@ namespace CoreRpc.Networking.Rpc
 		}
 
 		// TODO: Rename Send and SendAndReceive
-		
-		public void Send(byte[] data) => ConnectAndSend(serviceCallResult => 0, data);
 
-		public byte[] SendAndReceive(byte[] data) => 
-			ConnectAndSend(serviceCallResult => serviceCallResult.ReturnValue, data);
+		public void Send(byte[] data) => ConnectAndSendAsync(serviceCallResult => 0, data).Wait();
+
+		public byte[] SendAndReceive(byte[] data) =>
+			ConnectAndSendAsync(serviceCallResult => serviceCallResult.ReturnValue, data).Result;
+
+		public Task SendAsync(byte[] data) => ConnectAndSendAsync(serviceCallResult => 0, data);
+
+		public Task<byte[]> SendAndReceiveAsync(byte[] data) =>
+			ConnectAndSendAsync(serviceCallResult => serviceCallResult.ReturnValue, data);
 		
 		public void Dispose()
 		{
-			if (_tcpClient.Connected)
-			{				
-				ExceptionsHandlingHelper.ExecuteWithExceptionLogging(
-					() => SendData(_networkStream, NetworkConstants.EndOfSessionMessageBytes),
-					() =>
-					{
-						_tcpClient.Close();
-						_networkStream.Dispose();
-					},
-					_logger);
+			try
+			{
+				_tcpClientSemaphoreSlim.Wait(_closeTimeout);
+				if (_tcpClient.Connected)
+				{
+					ExceptionsHandlingHelper.ExecuteWithExceptionLogging(
+						() => SendDataAsync(
+							_networkStream, 
+							NetworkConstants.EndOfSessionMessageBytes).Wait(),
+						() =>
+						{
+							// ReSharper disable once AccessToDisposedClosure - synchronous code
+							_tcpClient.Close();
+							_networkStream.Dispose();
+						},
+						_logger);
+				}
+
+				_tcpClient.Dispose();
 			}
-
-			_tcpClient.Dispose();
+			finally
+			{
+				_tcpClientSemaphoreSlim.Release();
+			}
 		}
-		
-		private TResponse ConnectAndSend<TResponse>(Func<ServiceCallResult, TResponse> doWithServiceCallResult, byte[] data) => 
-			DoWithConnectedTcpClient(tcpClient => doWithServiceCallResult(SendDataAndGetResult(tcpClient, data)));
 
-		private ServiceCallResult SendDataAndGetResult(Stream networkStream, byte[] data)
+		private async Task<TResponse> ConnectAndSendAsync<TResponse>(
+			Func<ServiceCallResult, TResponse> doWithServiceCallResult,
+			byte[] data) =>
+			await DoWithConnectedTcpClientAsync(
+					async tcpClient => doWithServiceCallResult(
+						await SendDataAndGetResultAsync(tcpClient, data))).ConfigureAwait(false);
+
+		private async Task<ServiceCallResult> SendDataAndGetResultAsync(Stream networkStream, byte[] data)
 		{			
-			SendData(networkStream, data);
+			await SendDataAsync(networkStream, data);
 
-			var messageFromServer = networkStream.ReadMessage();
+			var messageFromServer = await networkStream.ReadMessageAsync();
 
 			try
 			{
@@ -75,31 +97,36 @@ namespace CoreRpc.Networking.Rpc
 			}
 		}
 
-		private static void SendData(Stream networkStream, byte[] data) => networkStream.WriteMessage(data);
+		private static async Task SendDataAsync(Stream networkStream, byte[] data) => 
+			await networkStream.WriteMessageAsync(data);
 
-		private TResult DoWithConnectedTcpClient<TResult>(Func<Stream, TResult> doWithNetworkStream)
+		private async Task<TResult> DoWithConnectedTcpClientAsync<TResult>(
+			Func<Stream, Task<TResult>> doWithNetworkStream)
 		{
-			lock (_tcpClientSyncRoot)
+			try
 			{
-				try
+				await _tcpClientSemaphoreSlim.WaitAsync();
+				if (!_tcpClient.Connected)
 				{
-					if (!_tcpClient.Connected)
-					{
-						_tcpClient.Connect(_hostName, _port);
-						_networkStream = GetNetworkStreamFromTcpClient(_tcpClient);
-					}
+					await _tcpClient.ConnectAsync(_hostName, _port);
+					_networkStream = await GetNetworkStreamFromTcpClientAsync(_tcpClient);
+				}
 
-					return doWithNetworkStream(_networkStream);
-				}
-				catch (SocketException socketException)
-				{
-					_logger.LogError(socketException);
-					throw new CoreRpcCommunicationException($"Error dispatching a call to the server: {socketException.Message}");
-				}
+				return await doWithNetworkStream(_networkStream);
+			}
+			catch (SocketException socketException)
+			{
+				_logger.LogError(socketException);
+				throw new CoreRpcCommunicationException(
+					$"Error dispatching a call to the server: {socketException.Message}");
+			}
+			finally
+			{
+				_tcpClientSemaphoreSlim.Release();
 			}
 		}
 
-		protected abstract Stream GetNetworkStreamFromTcpClient(TcpClient tcpClient);
+		protected abstract Task<Stream> GetNetworkStreamFromTcpClientAsync(TcpClient tcpClient);
 
 		protected readonly string _hostName;
 		
@@ -108,6 +135,10 @@ namespace CoreRpc.Networking.Rpc
 		private readonly ISerializer<ServiceCallResult> _serviceCallResultSerializer;
 		private readonly TcpClient _tcpClient;
 		private Stream _networkStream;
-		private readonly object _tcpClientSyncRoot = new object();
+		private readonly SemaphoreSlim _tcpClientSemaphoreSlim = new SemaphoreSlim(1);
+		// TODO: Make configurable
+		private readonly TimeSpan _closeTimeout = TimeSpan.FromSeconds(DefaultCloseTimeoutSeconds);
+
+		private const int DefaultCloseTimeoutSeconds = 30;
 	}
 }

@@ -146,7 +146,7 @@ namespace CoreRpc.Networking.Rpc
 									serviceType.GetMethods()
 										.Select(methodInfo =>
 											SyntaxFactory.MethodDeclaration(SyntaxFactory.ParseTypeName(CodeGenerationHelper.ParameterTypeToString(methodInfo.ReturnType)), methodInfo.Name)
-												.AddModifiers(SyntaxFactory.Token(SyntaxKind.PublicKeyword))
+												.AddModifiers(GetModifiers(methodInfo))
 												.WithParameterList(
 													SyntaxFactory.ParseParameterList($"({CodeGenerationHelper.GetAggregatedParametersString(methodInfo.GetParameters())})"))
 												.WithBody(CodeGenerationHelper.GetMethodBodyBlock(methodInfo, serviceDescriptor)))
@@ -193,7 +193,7 @@ namespace CoreRpc.Networking.Rpc
 
 			stream.Seek(0, SeekOrigin.Begin);
 			var generatedAssembly = Assembly.Load(stream.ToArray());
-			var generatedClass = generatedAssembly.DefinedTypes.Single();
+			var generatedClass = generatedAssembly.DefinedTypes.Single(type => type.Name == className);
 			var serviceInstance = Activator.CreateInstance(
 				generatedClass,
 				hostName,
@@ -204,5 +204,10 @@ namespace CoreRpc.Networking.Rpc
 			
 			return new ServiceClient<TService>(tcpClient, serviceInstance);
 		}
+
+		private static SyntaxToken[] GetModifiers(MethodInfo methodInfo) => 
+			AsyncHelper.IsAsyncMethod(methodInfo) ? 
+				new [] {SyntaxFactory.Token(SyntaxKind.PublicKeyword), SyntaxFactory.Token(SyntaxKind.AsyncKeyword)} : 
+				new [] {SyntaxFactory.Token(SyntaxKind.PublicKeyword)};
 	}
 }

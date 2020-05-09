@@ -1,5 +1,6 @@
 using System.IO;
 using System.Net.Sockets;
+using System.Threading.Tasks;
 using CoreRpc.Logging;
 using CoreRpc.Serialization;
 
@@ -15,6 +16,7 @@ namespace CoreRpc.Networking.Rpc
 		{
 		}
 
-		protected override Stream GetNetworkStreamFromTcpClient(TcpClient tcpClient) => tcpClient.GetStream();
+		protected override Task<Stream> GetNetworkStreamFromTcpClientAsync(TcpClient tcpClient) =>
+			Task.FromResult(tcpClient.GetStream() as Stream);
 	}
 }

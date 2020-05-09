@@ -47,9 +47,16 @@ namespace CoreRpc.UnitTests.TestData
         /// <param name="me"></param>
         /// <returns></returns>
         Task<SerializableObject> ConstructObjectAsync(int id, string name, double age);
-
+        
         /// <summary>
         /// Operation code 6
+        /// </summary>
+        /// <param name="me"></param>
+        /// <returns></returns>
+        Task<(int count, SerializableObject[] objects)> GetObjectsAsync(int offset, int count);
+
+        /// <summary>
+        /// Operation code 7
         /// </summary>
         /// <param name="me"></param>
         /// <returns></returns>

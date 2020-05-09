@@ -51,22 +51,27 @@ namespace CoreRpc.CodeGeneration
 		public static StatementSyntax CreateFieldAssigmentStatement(string parameterName) =>
 			CreateAssignmentStatement(NameToPrivateFieldName(parameterName), parameterName);
 
-		public static BlockSyntax GetMethodBodyBlock(MethodInfo methodInfo, ServiceDescriptor serviceDescriptor) =>
-			SyntaxFactory.Block(
-				CreateAssignmentStatement($"var {rpcMessageInstanceVariableName}", $"new {nameof(RpcMessage)}()"),
+		public static BlockSyntax GetMethodBodyBlock(MethodInfo methodInfo, ServiceDescriptor serviceDescriptor)
+		{
+			var isAsyncMethod = AsyncHelper.IsAsyncMethod(methodInfo);
+			return SyntaxFactory.Block(
 				CreateAssignmentStatement(
-					$"{rpcMessageInstanceVariableName}.{nameof(RpcMessage.ServiceCode)}",
+					$"var {RpcMessageInstanceVariableName}",
+					$"new {nameof(RpcMessage)}()"),
+				CreateAssignmentStatement(
+					$"{RpcMessageInstanceVariableName}.{nameof(RpcMessage.ServiceCode)}",
 					serviceDescriptor.ServiceCode.ToString()),
 				CreateAssignmentStatement(
-					$"{rpcMessageInstanceVariableName}.{nameof(RpcMessage.OperationCode)}",
+					$"{RpcMessageInstanceVariableName}.{nameof(RpcMessage.OperationCode)}",
 					serviceDescriptor.GetOperationCodeByMethodInfo(methodInfo).ToString()),
 				CreateAssignmentStatement(
-					$"{rpcMessageInstanceVariableName}.{nameof(RpcMessage.IsAsyncOperation)}",
-					AsyncHelper.IsAsyncMethod(methodInfo).ToString()),
+					$"{RpcMessageInstanceVariableName}.{nameof(RpcMessage.IsAsyncOperation)}",
+					isAsyncMethod.ToString().ToLower()),
 				CreateAssignmentStatement(
-					$"{rpcMessageInstanceVariableName}.{nameof(RpcMessage.ArgumentsData)}",
+					$"{RpcMessageInstanceVariableName}.{nameof(RpcMessage.ArgumentsData)}",
 					$"{GetParametersSerializationCode(methodInfo.GetParameters().Select(parameterInfo => new MethodParameter(parameterInfo)).ToArray())}"),
-				SyntaxFactory.ParseStatement(GetRemoteCallCode(methodInfo)));
+				SyntaxFactory.ParseStatement(GetRemoteCallCode(methodInfo, isAsyncMethod)));
+		}
 
 		private static string GetParametersSerializationCode(MethodParameter[] parameters)
 		{
@@ -83,7 +88,7 @@ namespace CoreRpc.CodeGeneration
 		}
 
 		private static string GetSerializerCallString(Type serializableType, string parameterName, bool doSerialize) =>
-			$"{serializerFactoryFieldName}.{nameof(ISerializerFactory.CreateSerializer)}<{ParameterTypeToString(serializableType)}>().{GetSerializerMethodName(doSerialize)}({parameterName})";
+			$"{SerializerFactoryFieldName}.{nameof(ISerializerFactory.CreateSerializer)}<{ParameterTypeToString(serializableType)}>().{GetSerializerMethodName(doSerialize)}({parameterName})";
 
 		private static string GetSerializerMethodName(bool doSerialize) =>
 			doSerialize ? nameof(ISerializer<object>.Serialize) : nameof(ISerializer<object>.Deserialize);
@@ -100,40 +105,58 @@ namespace CoreRpc.CodeGeneration
 			{
 				return "void";
 			}
-
+			
 			if (!parameterType.GenericTypeArguments.Any())
 			{
 				return parameterType.Name;
 			}
 
-			if (parameterType.FullName.Contains($"{typeof(ValueTuple).Namespace}.{typeof(ValueTuple).Name}"))
+			if (parameterType.Name.Contains($"{nameof(ValueTuple)}"))
 			{
 				return parameterType.GenericTypeArguments.Aggregate(
 					seed: "(",
 					func: (result, parameter) => $"{result} {parameter.Name},",
 					resultSelector: result => $"{result.Remove(result.Length - 1)}) ");
 			}
-
-			return parameterType.GenericTypeArguments.Aggregate(
-				seed: $"{parameterType.Name.Remove(parameterType.Name.LastIndexOf('`'))}<",
-				func: (result, parameter) => $"{result} {parameter.Name},",
-				resultSelector: result => $"{result.Remove(result.Length - 1)}> ");
+			
+			return
+				$@"{parameterType.Name.Substring(
+					0, 
+					parameterType.Name.IndexOf('`'))}<{parameterType.GetGenericArguments()
+					.Aggregate(
+						string.Empty, 
+						(result, parameter) => $"{result} {ParameterTypeToString(parameter)},",
+						result => result.Remove(result.Length - 1))}>";
 		}
 
-		private static string GetRemoteCallCode(MethodInfo methodInfo)
+		private static string GetRemoteCallCode(MethodInfo methodInfo, bool isAsyncMethod)
 		{
-			var messageSerializationCode = GetSerializerCallString(typeof(RpcMessage), rpcMessageInstanceVariableName, true);
+			var messageSerializationCode = GetSerializerCallString(
+				typeof(RpcMessage), 
+				RpcMessageInstanceVariableName, 
+				true);
 			if (methodInfo.ReturnType == typeof(void))
 			{
-				return $"{tcpClientFieldName}.{nameof(RpcTcpClientBase.Send)}({messageSerializationCode});";
+				return $"{TcpClientFieldName}.{nameof(RpcTcpClientBase.Send)}({messageSerializationCode});";
 			}
 
-			var sendAndRecieveCallCode = $"{tcpClientFieldName}.{nameof(RpcTcpClientBase.SendAndReceive)}({messageSerializationCode})";
-			return $"return {GetSerializerCallString(methodInfo.ReturnType, sendAndRecieveCallCode, false)};";
+			if (AsyncHelper.IsVoidAsyncMethod(methodInfo))
+			{
+				return $"await {TcpClientFieldName}.{nameof(RpcTcpClientBase.SendAsync)}({messageSerializationCode});";
+			}
+
+			var sendAndRecieveCallCode = isAsyncMethod ? 
+				$"await {TcpClientFieldName}.{nameof(RpcTcpClientBase.SendAndReceiveAsync)}({messageSerializationCode})" 
+				: $"{TcpClientFieldName}.{nameof(RpcTcpClientBase.SendAndReceive)}({messageSerializationCode})";
+			var typeToDeserialize = isAsyncMethod
+				? methodInfo.ReturnType.GetGenericArguments().First()
+				: methodInfo.ReturnType;
+			
+			return $"return {GetSerializerCallString(typeToDeserialize, sendAndRecieveCallCode, false)};";
 		}
 
-		private const string rpcMessageInstanceVariableName = "rpcMessage";
-		private const string serializerFactoryFieldName = "_serializerFactory";
-		private const string tcpClientFieldName = "_tcpClient";
+		private const string RpcMessageInstanceVariableName = "rpcMessage";
+		private const string SerializerFactoryFieldName = "_serializerFactory";
+		private const string TcpClientFieldName = "_tcpClient";
 	}
 }

@@ -26,8 +26,8 @@ namespace CoreRpc.Networking.Rpc
 			ServiceDescriptor = ServiceDescriptor.Of<TService>();
 			ServicePort = serviceType.GetCustomAttribute<ServiceAttribute>()?.Port ?? NetworkConstants.DefaultPort;
 
-			var (asyncMethods, syncMethods) = serviceMethods.Partition(
-				methodInfo => typeof(Task).IsAssignableFrom(methodInfo.ReturnType));
+			var (asyncMethods, syncMethods) = 
+				serviceMethods.Partition(AsyncHelper.IsAsyncMethod);
 			var (asyncOperationNames, syncOperationNames) = 
 				ServiceDescriptor.OperationNameCodeDictionary.Keys
 				.Partition(key => asyncMethods.Any(methodInfo => methodInfo.GetFullMethodName() == key));

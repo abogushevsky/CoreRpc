@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using CoreRpc.Logging;
 using CoreRpc.Networking.Rpc;
 using CoreRpc.Serialization;
@@ -57,6 +58,14 @@ namespace CoreRpc.UnitTests
 						SerializableObject.TestString,
 						SerializableObject.TestDouble);
 					Assert.NotNull(constructedObject);
+					Assert.Equal(SerializableObject.TestInt, constructedObject.IntProperty);
+					Assert.Equal(SerializableObject.TestString, constructedObject.StringProperty);
+					Assert.Equal(SerializableObject.TestDouble, constructedObject.NestedObject.DoubleProperty);
+
+					var constructedTuple = await client.ServiceInstance.GetObjectsAsync(1, 1);
+					Assert.NotNull(constructedTuple);
+					Assert.Equal(2, constructedTuple.count);
+					constructedObject = constructedTuple.objects.Single();
 					Assert.Equal(SerializableObject.TestInt, constructedObject.IntProperty);
 					Assert.Equal(SerializableObject.TestString, constructedObject.StringProperty);
 					Assert.Equal(SerializableObject.TestDouble, constructedObject.NestedObject.DoubleProperty);
