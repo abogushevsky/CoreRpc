@@ -62,10 +62,9 @@ namespace CoreRpc.UnitTests
 					Assert.Equal(SerializableObject.TestString, constructedObject.StringProperty);
 					Assert.Equal(SerializableObject.TestDouble, constructedObject.NestedObject.DoubleProperty);
 
-					var constructedTuple = await client.ServiceInstance.GetObjectsAsync(1, 1);
-					Assert.NotNull(constructedTuple);
-					Assert.Equal(2, constructedTuple.count);
-					constructedObject = constructedTuple.objects.Single();
+					var (count, objects) = await client.ServiceInstance.GetObjectsAsync(1, 1);
+					Assert.Equal(2, count);
+					constructedObject = objects.Single();
 					Assert.Equal(SerializableObject.TestInt, constructedObject.IntProperty);
 					Assert.Equal(SerializableObject.TestString, constructedObject.StringProperty);
 					Assert.Equal(SerializableObject.TestDouble, constructedObject.NestedObject.DoubleProperty);
