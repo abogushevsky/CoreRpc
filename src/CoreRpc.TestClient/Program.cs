@@ -38,7 +38,7 @@ namespace CoreRpc.TestClient
                 
                 const int callsCount = 1000;
                 RunTests(() => TestSyncOperations(testServiceClient.ServiceInstance, logger, callsCount), logger);
-                RunTests(() => TestAsyncOperations(testServiceClient.ServiceInstance, logger, 1), logger);
+                // RunTests(() => TestAsyncOperations(testServiceClient.ServiceInstance, logger, 1), logger);
 
                 Console.WriteLine("All requests send.");
                 Console.ReadLine();

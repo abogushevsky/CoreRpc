@@ -10,17 +10,8 @@ namespace CoreRpc.Serialization.MessagePack
             _cachedSerializers = new ConcurrentDictionary<Type, object>();
         }
 
-        public ISerializer<T> CreateSerializer<T>() 
-        {
-            var cacheKey = typeof(T);
-            if (!_cachedSerializers.TryGetValue(cacheKey, out object result))
-            {
-                result = new MessagePackObjectSerializer<T>();
-                _cachedSerializers[cacheKey] = result;
-            }
-
-            return (ISerializer<T>) result;
-        }
+        public ISerializer<T> CreateSerializer<T>() => 
+            (ISerializer<T>) _cachedSerializers.GetOrAdd(typeof(T), _ => new MessagePackObjectSerializer<T>());
 
         private readonly ConcurrentDictionary<Type, object> _cachedSerializers;
     }
