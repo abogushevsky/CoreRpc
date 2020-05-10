@@ -130,5 +130,7 @@ using (var serviceClient = ServiceClientFactory.CreateServiceClient<ITestService
 }
 ```
 
+`serializerFactory` parameter is not required. This is an extension point in case if you want to use other implementation than the default one (which is `MessagePackSerializerFactory`).
+
 ## Releases
 Unfortunately, project is not production ready. There are many things to be done.
