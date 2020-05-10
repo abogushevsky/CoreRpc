@@ -41,12 +41,18 @@ namespace CoreRpc.CodeGeneration
 		{
 			var methodsInfo = serviceInterfaceType.GetMethods().ToArray();
 			return methodsInfo
-				.Select(methodInfo => methodInfo.ReturnType)
+				.SelectMany(methodInfo => GetAllGenericTypes(methodInfo.ReturnType))
 				.Union(methodsInfo.SelectMany(methodInfo =>
-					methodInfo.GetParameters().Select(parameterInfo => parameterInfo.ParameterType)))
+					methodInfo.GetParameters().SelectMany(
+						parameterInfo => GetAllGenericTypes(parameterInfo.ParameterType))))
 				.Union(serviceInterfaceType.AsArray())
 				.ToArray();
 		}
+
+		private static Type[] GetAllGenericTypes(Type type) =>
+			type.GetGenericArguments().Any() ? 
+				type.GetGenericArguments().SelectMany(GetAllGenericTypes).Union(new [] {type}).ToArray() : 
+				new [] {type};
 
 		public static StatementSyntax CreateFieldAssigmentStatement(string parameterName) =>
 			CreateAssignmentStatement(NameToPrivateFieldName(parameterName), parameterName);

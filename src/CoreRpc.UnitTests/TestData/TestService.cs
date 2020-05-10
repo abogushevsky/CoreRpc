@@ -1,5 +1,7 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
+using System.Linq;
 using System.Threading.Tasks;
 
 namespace CoreRpc.UnitTests.TestData
@@ -57,6 +59,12 @@ namespace CoreRpc.UnitTests.TestData
 		{
 			await Task.Delay(1);
 			VoidMethod(someString);
+		}
+
+		public async Task<List<SerializableObject>> ConstructObjectsListAsync(Int32[] ids, String[] names, Double[] ages)
+		{
+			var result = await ConstructObjectAsync(ids.First(), names.First(), ages.First());
+			return new[] {result}.ToList();
 		}
 
 		private readonly Action _callback;

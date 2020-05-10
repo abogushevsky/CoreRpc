@@ -1,4 +1,5 @@
-﻿using System.Threading.Tasks;
+﻿using System.Collections.Generic;
+using System.Threading.Tasks;
 using CoreRpc.Networking.Rpc.ServiceAnnotations;
 
 namespace CoreRpc.UnitTests.TestData
@@ -61,5 +62,7 @@ namespace CoreRpc.UnitTests.TestData
         /// <param name="me"></param>
         /// <returns></returns>
         Task VoidMethodAsync(string someString);
+
+        Task<List<SerializableObject>> ConstructObjectsListAsync(int[] ids, string[] names, double[] ages);
     }
 }
