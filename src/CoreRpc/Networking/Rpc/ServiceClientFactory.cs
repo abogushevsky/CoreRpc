@@ -7,6 +7,7 @@ using System.Reflection;
 using CoreRpc.CodeGeneration;
 using CoreRpc.Logging;
 using CoreRpc.Serialization;
+using CoreRpc.Serialization.MessagePack;
 using CoreRpc.Utilities;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
@@ -16,6 +17,13 @@ namespace CoreRpc.Networking.Rpc
 	[SuppressMessage("ReSharper", "CoVariantArrayConversion")]
 	public static class ServiceClientFactory
 	{
+		public static ServiceClient<TService> CreateServiceClient<TService>(
+			string hostName,
+			ILogger logger) where TService : class
+		{
+			return CreateServiceClient<TService>(hostName, logger, new MessagePackSerializerFactory());
+		}
+		
 		public static ServiceClient<TService> CreateServiceClient<TService>(
 			string hostName, 
 			ILogger logger,

@@ -1,11 +1,15 @@
 using System;
 using CoreRpc.Logging;
 using CoreRpc.Serialization;
+using CoreRpc.Serialization.MessagePack;
 
 namespace CoreRpc.Networking.Rpc
 {
 	public sealed class RpcTcpServicePublisher
 	{
+		public RpcTcpServicePublisher(ILogger logger) : this(new MessagePackSerializerFactory(), logger)
+		{
+		}
 		public RpcTcpServicePublisher(ISerializerFactory serializerFactory, ILogger logger)
 		{
 			_serializerFactory = serializerFactory;

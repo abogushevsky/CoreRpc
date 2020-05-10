@@ -1,8 +1,6 @@
 ﻿using System;
-using System.Diagnostics;
 using CoreRpc.Logging;
 using CoreRpc.Networking.Rpc;
-using CoreRpc.Serialization.MessagePack;
 using CoreRpc.TestContract;
 using CoreRpc.Utilities;
 
@@ -18,8 +16,7 @@ namespace CoreRpc.TestServer
                 Helpers.LogCurrentMemoryUsage(logger);
                 Console.ReadLine();
                 
-                var messagePackSerializerFactory = new MessagePackSerializerFactory();
-                var rpcTcpServicePublisher = new RpcTcpServicePublisher(messagePackSerializerFactory, logger);
+                var rpcTcpServicePublisher = new RpcTcpServicePublisher(logger);
                 var defaultServiceTimeout = TimeSpan.FromMinutes(1);
                 var testService = new TestService(logger);
 
