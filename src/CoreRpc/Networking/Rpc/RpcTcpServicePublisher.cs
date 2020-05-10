@@ -17,9 +17,15 @@ namespace CoreRpc.Networking.Rpc
 			_logger = logger;
 		}
 
-		public RpcTcpServer<TService> PublishUnsecured<TService>(TService serviceInstance, TimeSpan serviceShutdownTimeout)
+		public RpcTcpServer<TService> PublishUnsecured<TService>(
+			TService serviceInstance, 
+			TimeSpan serviceShutdownTimeout)
 		{
-			var service = new RpcTcpServer<TService>(serviceInstance, serviceShutdownTimeout, _serializerFactory, _logger);
+			var service = new RpcTcpServer<TService>(
+				serviceInstance, 
+				serviceShutdownTimeout, 
+				_serializerFactory, 
+				_logger);
 			service.Start();
 			return service;
 		}
@@ -29,7 +35,12 @@ namespace CoreRpc.Networking.Rpc
 			TimeSpan serviceShutdownTimeout,
 			ServerSslSettings sslSettings)
 		{
-			var service = new RpcTcpServer<TService>(serviceInstance, serviceShutdownTimeout, sslSettings, _serializerFactory, _logger);
+			var service = new RpcTcpServer<TService>(
+				serviceInstance, 
+				serviceShutdownTimeout, 
+				sslSettings, 
+				_serializerFactory, 
+				_logger);
 			service.Start();
 			return service;
 		}
