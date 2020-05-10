@@ -199,7 +199,7 @@ namespace CoreRpc.Networking.Rpc
 			{
 				var compilerOutputMessageBuilder = new StringBuilder();
 				compilerOutputMessageBuilder.AppendLine(
-					$"There are following problems found during compillation client proxy for {typeof(TService).FullName}");
+					$"There were following problems found during client proxy class compilation for {typeof(TService).FullName}");
 				emitResult.Diagnostics.ForEach(
 					item => compilerOutputMessageBuilder.AppendLine($"{item.Severity}: {item.GetMessage()}"));
 				logger.LogDebug(compilerOutputMessageBuilder.ToString());
