@@ -5,7 +5,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using CoreRpc.Logging;
 using CoreRpc.Networking.Rpc;
-using CoreRpc.Serialization.MessagePack;
 using CoreRpc.TestContract;
 
 namespace CoreRpc.TestClient
@@ -18,12 +17,9 @@ namespace CoreRpc.TestClient
             Helpers.LogCurrentMemoryUsage(logger);
             Console.ReadLine();
 
-            var messagePackSerializerFactory = new MessagePackSerializerFactory();
-
             using (var testServiceClient = ServiceClientFactory.CreateServiceClient<ITestService>(
                 "localhost",
-                logger,
-                messagePackSerializerFactory))
+                logger))
             {
                 Console.WriteLine("Test service client created.");
 
