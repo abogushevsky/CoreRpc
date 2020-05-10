@@ -3,7 +3,7 @@ using System.Threading.Tasks;
 
 namespace CoreRpc.Networking.Rpc
 {
-    public class AsyncOperationCallResult
+    internal class AsyncOperationCallResult
     {
         public AsyncOperationCallResult(Task task)
         {

@@ -13,7 +13,7 @@ namespace CoreRpc.Networking.Rpc
 {
 	public class RpcTcpServer<TService> : IDisposable
 	{
-		public RpcTcpServer(
+		internal RpcTcpServer(
 			TService serviceInstance, 
 			TimeSpan serviceShutdownTimeout,
 			ISerializerFactory serializerFactory,
@@ -21,7 +21,7 @@ namespace CoreRpc.Networking.Rpc
 		{
 		}
 		
-		public RpcTcpServer(
+		internal RpcTcpServer(
 			TService serviceInstance, 
 			TimeSpan serviceShutdownTimeout,
 			ServerSslSettings sslSettings,
@@ -39,7 +39,7 @@ namespace CoreRpc.Networking.Rpc
 			_tcpListener = new TcpListener(IPAddress.Any, _serviceDispatcher.ServicePort);
 		}
 
-		public void Start()
+		internal void Start()
 		{
 			_tcpListener.Start();
 			Task.Factory.StartNew(async () => await AcceptClient(), TaskCreationOptions.LongRunning);

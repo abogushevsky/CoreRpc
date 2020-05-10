@@ -6,7 +6,7 @@ using CoreRpc.Serialization;
 
 namespace CoreRpc.Networking.Rpc
 {
-	public sealed class UnprotectedRpcTcpClient : RpcTcpClientBase
+	internal sealed class UnprotectedRpcTcpClient : RpcTcpClientBase
 	{
 		public UnprotectedRpcTcpClient(
 			string hostName, 
