@@ -117,7 +117,7 @@ var serializerFactory = new MessagePackSerializerFactory(); // or any other impl
 var servicePublisher = new RpcTcpServicePublisher(serializerFactory, logger);
 var serviceInstance = new TestService();
 
-var publishedService = servicePublisher.PublishUnsecured(testService, serviceShutdownTimeout: TimeSpan.FromMinutes(1)); // use PublishSecured() for SSL commnications.
+var publishedService = servicePublisher.PublishUnsecured(serviceInstance, serviceShutdownTimeout: TimeSpan.FromMinutes(1)); // use PublishSecured() for SSL commnications.
 // hold reference while application is working and dispose before shutdown
 publishedService.Dispose();
 ```
