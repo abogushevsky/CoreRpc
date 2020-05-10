@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Net.Security;
 using System.Reflection;
+using System.Text;
 using CoreRpc.CodeGeneration;
 using CoreRpc.Logging;
 using CoreRpc.Serialization;
@@ -196,6 +197,12 @@ namespace CoreRpc.Networking.Rpc
 
 			if (!emitResult.Success)
 			{
+				var compilerOutputMessageBuilder = new StringBuilder();
+				compilerOutputMessageBuilder.AppendLine(
+					$"There are following problems found during compillation client proxy for {typeof(TService).FullName}");
+				emitResult.Diagnostics.ForEach(
+					item => compilerOutputMessageBuilder.AppendLine($"{item.Severity}: {item.GetMessage()}"));
+				logger.LogDebug(compilerOutputMessageBuilder.ToString());
 				return null;
 			}
 

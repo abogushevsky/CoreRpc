@@ -10,6 +10,7 @@ namespace CoreRpc.Networking.Rpc
 		public RpcTcpServicePublisher(ILogger logger) : this(new MessagePackSerializerFactory(), logger)
 		{
 		}
+		
 		public RpcTcpServicePublisher(ISerializerFactory serializerFactory, ILogger logger)
 		{
 			_serializerFactory = serializerFactory;
