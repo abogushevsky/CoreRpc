@@ -28,15 +28,18 @@ namespace CoreRpc.Networking.Rpc
 
 		// TODO: Rename Send and SendAndReceive
 
-		public void Send(byte[] data) => ConnectAndSendAsync(serviceCallResult => 0, data).Wait();
+		public void Send(byte[] data) => ConnectAndSend(serviceCallResult => 0, data);
 
 		public byte[] SendAndReceive(byte[] data) =>
-			ConnectAndSendAsync(serviceCallResult => serviceCallResult.ReturnValue, data).Result;
+			ConnectAndSend(serviceCallResult => serviceCallResult.ReturnValue, data);
 
-		public Task SendAsync(byte[] data) => ConnectAndSendAsync(serviceCallResult => 0, data);
+		public async Task SendAsync(byte[] data) => 
+			await ConnectAndSendAsync(serviceCallResult => 0, data)
+				.ConfigureAwait(false);
 
-		public Task<byte[]> SendAndReceiveAsync(byte[] data) =>
-			ConnectAndSendAsync(serviceCallResult => serviceCallResult.ReturnValue, data);
+		public async Task<byte[]> SendAndReceiveAsync(byte[] data) =>
+			await ConnectAndSendAsync(serviceCallResult => serviceCallResult.ReturnValue, data)
+				.ConfigureAwait(false);
 		
 		public void Dispose()
 		{
@@ -66,12 +69,42 @@ namespace CoreRpc.Networking.Rpc
 			}
 		}
 
+		private TResponse ConnectAndSend<TResponse>(
+			Func<ServiceCallResult, TResponse> doWithServiceCallResult,
+			byte[] data) => 
+			DoWithConnectedTcpClient(
+				tcpClient => doWithServiceCallResult(SendDataAndGetResult(tcpClient, data)));
+
 		private async Task<TResponse> ConnectAndSendAsync<TResponse>(
 			Func<ServiceCallResult, TResponse> doWithServiceCallResult,
 			byte[] data) =>
 			await DoWithConnectedTcpClientAsync(
 					async tcpClient => doWithServiceCallResult(
 						await SendDataAndGetResultAsync(tcpClient, data))).ConfigureAwait(false);
+		
+		private ServiceCallResult SendDataAndGetResult(Stream networkStream, byte[] data)
+		{			
+			SendData(networkStream, data);
+
+			var messageFromServer = networkStream.ReadMessage();
+
+			try
+			{
+				var serviceCallResult = _serviceCallResultSerializer.Deserialize(messageFromServer);
+				if (serviceCallResult.HasException)
+				{
+					throw ExceptionsSerializer.Instance.Deserialize(serviceCallResult.Exception);
+				}
+
+				return serviceCallResult;
+			}
+			catch (Exception exception)
+			{
+				_logger.LogError(exception);
+				throw new CoreRpcCommunicationException(
+					$"Server doesn't provide a meanfull response. Original exception text {exception.Message}");
+			}
+		}
 
 		private async Task<ServiceCallResult> SendDataAndGetResultAsync(Stream networkStream, byte[] data)
 		{			
@@ -96,9 +129,37 @@ namespace CoreRpc.Networking.Rpc
 					$"Server doesn't provide a meanfull response. Original exception text {exception.Message}");
 			}
 		}
+		
+		private static void SendData(Stream networkStream, byte[] data) => 
+			networkStream.WriteMessage(data);
 
 		private static async Task SendDataAsync(Stream networkStream, byte[] data) => 
 			await networkStream.WriteMessageAsync(data);
+		
+		private TResult DoWithConnectedTcpClient<TResult>(Func<Stream, TResult> doWithNetworkStream)
+		{
+			try
+			{
+				_tcpClientSemaphoreSlim.Wait();
+				if (!_tcpClient.Connected)
+				{
+					_tcpClient.Connect(_hostName, _port);
+					_networkStream = GetNetworkStreamFromTcpClient(_tcpClient);
+				}
+
+				return doWithNetworkStream(_networkStream);
+			}
+			catch (SocketException socketException)
+			{
+				_logger.LogError(socketException);
+				throw new CoreRpcCommunicationException(
+					$"Error dispatching a call to the server: {socketException.Message}");
+			}
+			finally
+			{
+				_tcpClientSemaphoreSlim.Release();
+			}
+		}
 
 		private async Task<TResult> DoWithConnectedTcpClientAsync<TResult>(
 			Func<Stream, Task<TResult>> doWithNetworkStream)
@@ -125,6 +186,8 @@ namespace CoreRpc.Networking.Rpc
 				_tcpClientSemaphoreSlim.Release();
 			}
 		}
+		
+		protected abstract Stream GetNetworkStreamFromTcpClient(TcpClient tcpClient);
 
 		protected abstract Task<Stream> GetNetworkStreamFromTcpClientAsync(TcpClient tcpClient);
 

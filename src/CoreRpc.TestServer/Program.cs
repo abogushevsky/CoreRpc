@@ -14,7 +14,7 @@ namespace CoreRpc.TestServer
             // using (var logger = new ConsoleLoggerWrapper(new LoggerStub()))
             // {
                 Helpers.LogCurrentMemoryUsage(logger);
-                Console.ReadLine();
+                // Console.ReadLine();
                 
                 var rpcTcpServicePublisher = new RpcTcpServicePublisher(logger);
                 var defaultServiceTimeout = TimeSpan.FromMinutes(1);

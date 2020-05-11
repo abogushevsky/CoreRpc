@@ -32,6 +32,18 @@ namespace CoreRpc.Networking.Rpc
 			_serverCertificateValidationCallback = serverCertificateValidationCallback;
 			_clientCertificateSelectionCallback = clientCertificateSelectionCallback;
 		}
+		
+		protected override Stream GetNetworkStreamFromTcpClient(TcpClient tcpClient)
+		{
+			var sslStream = new SslStream(
+				tcpClient.GetStream(), 
+				leaveInnerStreamOpen: false, 
+				userCertificateValidationCallback: _serverCertificateValidationCallback, 
+				userCertificateSelectionCallback: _clientCertificateSelectionCallback);
+			
+			sslStream.AuthenticateAsClient(_hostName); // TODO: select client cert
+			return sslStream;
+		}
 
 		protected override async Task<Stream> GetNetworkStreamFromTcpClientAsync(TcpClient tcpClient)
 		{

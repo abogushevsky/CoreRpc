@@ -15,7 +15,7 @@ namespace CoreRpc.TestClient
         {
             var logger = new LoggerStub();
             Helpers.LogCurrentMemoryUsage(logger);
-            Console.ReadLine();
+            // Console.ReadLine();
 
             using (var testServiceClient = ServiceClientFactory.CreateServiceClient<ITestService>(
                 "localhost",
@@ -28,14 +28,13 @@ namespace CoreRpc.TestClient
                 Enumerable
                     .Range(0, warmUpCallsCount)
                     .ParallelForEach(_ => SendRequestAndLogResult(testServiceClient.ServiceInstance, logger));
-
+                
                 GC.Collect(2, GCCollectionMode.Forced);
                 Thread.Sleep(TimeSpan.FromSeconds(5));
                 
                 const int callsCount = 1000;
-                RunTests(() => TestSyncOperations(testServiceClient.ServiceInstance, logger, callsCount), logger);
-                // RunTests(() => TestAsyncOperations(testServiceClient.ServiceInstance, logger, 1), logger);
-
+                // RunTests(() => TestSyncOperations(testServiceClient.ServiceInstance, logger, callsCount), logger);
+                RunTests(() => TestAsyncOperations(testServiceClient.ServiceInstance, logger, 1), logger);
                 Console.WriteLine("All requests send.");
                 Console.ReadLine();
             }
@@ -59,7 +58,7 @@ namespace CoreRpc.TestClient
         {
             var tasks = Enumerable
                 .Range(0, callsCount)
-                .Select(_ => SendRequestAndLogResultAsync(testService, logger))
+                .Select(async _ => await SendRequestAndLogResultAsync(testService, logger))
                 .ToArray();
             Task.WaitAll(tasks);
         }

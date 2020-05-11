@@ -15,6 +15,8 @@ namespace CoreRpc.Networking.Rpc
 			ILogger logger) : base(hostName, port, serializerFactory, logger)
 		{
 		}
+		
+		protected override Stream GetNetworkStreamFromTcpClient(TcpClient tcpClient) => tcpClient.GetStream();
 
 		protected override Task<Stream> GetNetworkStreamFromTcpClientAsync(TcpClient tcpClient) =>
 			Task.FromResult(tcpClient.GetStream() as Stream);
