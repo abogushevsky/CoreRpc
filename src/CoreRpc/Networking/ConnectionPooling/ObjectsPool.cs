@@ -7,20 +7,23 @@ using CoreRpc.Utilities;
 
 namespace CoreRpc.Networking.ConnectionPooling
 {
-    internal class ObjectsPool<T> : IObjectsPool<T>
+    internal class ObjectsPool<T> : IObjectsPool<T>, IDisposable
     {
-        public ObjectsPool(Func<T> creator, IDateTimeProvider dateTimeProvider, int capacity = DEFAULT_CAPACITY) : 
-            this(creator, TimeSpan.FromSeconds(DEFAULT_LIFETIME_SECONDS), dateTimeProvider, capacity)
+        public ObjectsPool(
+            PooledItemManager<T> itemManager, 
+            IDateTimeProvider dateTimeProvider, 
+            int capacity = DEFAULT_CAPACITY) : 
+            this(itemManager, TimeSpan.FromSeconds(DEFAULT_LIFETIME_SECONDS), dateTimeProvider, capacity)
         {
         }
         
         public ObjectsPool(
-            Func<T> creator, 
+            PooledItemManager<T> itemManager, 
             TimeSpan lifetime, 
             IDateTimeProvider dateTimeProvider, 
             int capacity = DEFAULT_CAPACITY)
         {
-            _creator = creator;
+            _itemManager = itemManager;
             _lifetime = lifetime;
             _dateTimeProvider = dateTimeProvider;
             _semaphore = new SemaphoreSlim(capacity);
@@ -28,12 +31,27 @@ namespace CoreRpc.Networking.ConnectionPooling
         
         public async Task<T> Acquire()
         {
+            if (_isDisposed)
+            {
+                throw new ObjectDisposedException("This ObjectsPool instance has been disposed");
+            }
+            
             await _semaphore.WaitAsync();
-            var item = _freeClients.TryPop(out var pooled) && IsActual(pooled)
-                ? pooled
-                : new PooledItem(
-                    _creator(), 
+            PooledItem item;
+            if (_freeClients.TryPop(out var pooled) && IsActual(pooled))
+            {
+                item = pooled;
+            }
+            else
+            {
+                if (pooled != null)
+                {
+                    Cleanup(pooled.Item);
+                }
+                item = new PooledItem(
+                    _itemManager.Create(),
                     _lifetime == TimeSpan.MaxValue ? DateTime.MaxValue : _dateTimeProvider.GetCurrent().Add(_lifetime));
+            }
             _busyClients[item.Item] = item;
             return item.Item;
         }
@@ -42,7 +60,10 @@ namespace CoreRpc.Networking.ConnectionPooling
         {
             if (_busyClients.TryRemove(item, out var pooledItem))
             {
-                _freeClients.Push(pooledItem);
+                if (!_isDisposed)
+                {
+                    _freeClients.Push(pooledItem);
+                }
             }
             else
             {
@@ -53,19 +74,34 @@ namespace CoreRpc.Networking.ConnectionPooling
             _semaphore.Release();
         }
         
+        public void Dispose()
+        {
+            _isDisposed = true;
+            _freeClients.ForEach(item => Cleanup(item.Item));
+            // TODO: Gracefully wait for completion of busy objects
+        }
+        
         private bool IsActual(PooledItem item) => _dateTimeProvider.GetCurrent() < item.ExpirationTime;
 
-        protected void Cleanup(T item)
+        private void Cleanup(T item)
         {
-            
-        }
+            try
+            {
+                _itemManager.Cleanup(item);
+            }
+            catch (Exception ex)
+            {
+                Trace.TraceError($"Exception occured during pooled item {item} cleanup: {ex}");
+            }
+        } 
         
         private readonly ConcurrentStack<PooledItem> _freeClients = new ConcurrentStack<PooledItem>();
         private readonly ConcurrentDictionary<T, PooledItem> _busyClients = new ConcurrentDictionary<T, PooledItem>();
-        private readonly Func<T> _creator;
+        private readonly PooledItemManager<T> _itemManager;
         private readonly TimeSpan _lifetime;
         private readonly SemaphoreSlim _semaphore;
         private readonly IDateTimeProvider _dateTimeProvider;
+        private volatile bool _isDisposed = false;
         
         private const int DEFAULT_LIFETIME_SECONDS = 30;
         private const int DEFAULT_CAPACITY = 10;

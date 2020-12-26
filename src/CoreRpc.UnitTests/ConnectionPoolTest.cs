@@ -13,7 +13,7 @@ namespace CoreRpc.UnitTests
         public async Task GivenFirstObjectIsCreatedAfterFirstCallWhenObjectIsReleasedThenSameObjectIsReturnedOnSecondCall()
         {
             var testPool = new ObjectsPool<PooledObject>(
-                () => new PooledObject(),
+                new PooledItemManager<PooledObject>(() => new PooledObject(), item => {}),
                 TimeSpan.MaxValue,
                 _testDateTimeProvider,
                 1);
@@ -32,7 +32,7 @@ namespace CoreRpc.UnitTests
         public void GivenFirstObjectIsLockedAndSecondCallIsPerformedThenSecondObjectIsCreated()
         {
             var testPool = new ObjectsPool<PooledObject>(
-                () => new PooledObject(),
+                new PooledItemManager<PooledObject>(() => new PooledObject(), item => {}),
                 TimeSpan.MaxValue,
                 _testDateTimeProvider,
                 2);
