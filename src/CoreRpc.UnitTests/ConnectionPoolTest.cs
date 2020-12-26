@@ -1,6 +1,8 @@
 using System;
-using System.Collections.Generic;
+using System.Threading.Tasks;
 using CoreRpc.Networking.ConnectionPooling;
+using CoreRpc.UnitTests.Utilities;
+using CoreRpc.Utilities;
 using Xunit;
 
 namespace CoreRpc.UnitTests
@@ -8,18 +10,19 @@ namespace CoreRpc.UnitTests
     public class ConnectionPoolTest
     {
         [Fact]
-        public void GivedFirstObjectIsCreatedAfterFirstCallWhenObjectIsReleasedThenSameObjectIsReturnedOnSecondCall()
+        public async Task GivenFirstObjectIsCreatedAfterFirstCallWhenObjectIsReleasedThenSameObjectIsReturnedOnSecondCall()
         {
-            var testPool = new TestObjectsPool(
+            var testPool = new ObjectsPool<PooledObject>(
                 () => new PooledObject(),
-                new List<PooledObject>(),
-                TimeSpan.MaxValue);
-            var testObject = testPool.Acquire();
+                TimeSpan.MaxValue,
+                _testDateTimeProvider,
+                1);
+            var testObject = await testPool.Acquire();
             Assert.NotNull(testObject);
             Assert.Equal(1, testObject.InstanceNumber);
             
             testPool.Release(testObject);
-            var secondTestObject = testPool.Acquire();
+            var secondTestObject = await testPool.Acquire();
             Assert.Equal(1, testObject.InstanceNumber);
             Assert.Equal(testObject, secondTestObject);
             Assert.True(ReferenceEquals(testObject, secondTestObject));
@@ -28,10 +31,11 @@ namespace CoreRpc.UnitTests
         [Fact]
         public void GivenFirstObjectIsLockedAndSecondCallIsPerformedThenSecondObjectIsCreated()
         {
-            var testPool = new TestObjectsPool(
+            var testPool = new ObjectsPool<PooledObject>(
                 () => new PooledObject(),
-                new List<PooledObject>(),
-                TimeSpan.MaxValue);
+                TimeSpan.MaxValue,
+                _testDateTimeProvider,
+                2);
             
             Assert.True(false);
         }
@@ -41,6 +45,9 @@ namespace CoreRpc.UnitTests
         {
             Assert.True(false);
         }
+
+        private readonly TestDateTimeProvider _testDateTimeProvider = 
+            new TestDateTimeProvider(new DateTimeProvider());
     }
 
     internal class PooledObject
@@ -53,23 +60,5 @@ namespace CoreRpc.UnitTests
         public int InstanceNumber { get; }
 
         private static int Count = 0;
-    }
-
-    internal class TestObjectsPool : ObjectsPool<PooledObject>
-    {
-        public TestObjectsPool(
-            Func<PooledObject> creator,
-            List<PooledObject> cleanedUpObjects,
-                TimeSpan lifetime) : base(creator, lifetime)
-        {
-            _cleanedUpObjects = cleanedUpObjects;
-        }
-
-        protected override void Cleanup(PooledObject item)
-        {
-            _cleanedUpObjects.Add(item);
-        }
-        
-        private readonly List<PooledObject> _cleanedUpObjects;
     }
 }

@@ -1,43 +1,86 @@
 using System;
-using System.Collections.Generic;
-using static CoreRpc.Utilities.ExecutionHelper;
+using System.Collections.Concurrent;
+using System.Diagnostics;
+using System.Threading;
+using System.Threading.Tasks;
+using CoreRpc.Utilities;
 
 namespace CoreRpc.Networking.ConnectionPooling
 {
-    internal abstract class ObjectsPool<T>
+    internal class ObjectsPool<T> : IObjectsPool<T>
     {
-        public ObjectsPool(Func<T> creator) : this(creator, TimeSpan.FromSeconds(DEFAULT_LIFETIME_SECONDS))
+        public ObjectsPool(Func<T> creator, IDateTimeProvider dateTimeProvider, int capacity = DEFAULT_CAPACITY) : 
+            this(creator, TimeSpan.FromSeconds(DEFAULT_LIFETIME_SECONDS), dateTimeProvider, capacity)
         {
         }
         
-        public ObjectsPool(Func<T> creator, TimeSpan lifetime)
+        public ObjectsPool(
+            Func<T> creator, 
+            TimeSpan lifetime, 
+            IDateTimeProvider dateTimeProvider, 
+            int capacity = DEFAULT_CAPACITY)
         {
             _creator = creator;
             _lifetime = lifetime;
+            _dateTimeProvider = dateTimeProvider;
+            _semaphore = new SemaphoreSlim(capacity);
         }
         
-        public T Acquire()
+        public async Task<T> Acquire()
         {
-            WithLock(_locker, () =>
-            {
-
-            });
-            throw new System.NotImplementedException();
+            await _semaphore.WaitAsync();
+            var item = _freeClients.TryPop(out var pooled) && IsActual(pooled)
+                ? pooled
+                : new PooledItem(
+                    _creator(), 
+                    _lifetime == TimeSpan.MaxValue ? DateTime.MaxValue : _dateTimeProvider.GetCurrent().Add(_lifetime));
+            _busyClients[item.Item] = item;
+            return item.Item;
         }
 
         public void Release(T item)
         {
-            throw new System.NotImplementedException();
-        }
+            if (_busyClients.TryRemove(item, out var pooledItem))
+            {
+                _freeClients.Push(pooledItem);
+            }
+            else
+            {
+                // TODO: Replace own logging with Trace or use own logger here
+                Trace.TraceError($"Pooled object for {item} not found");
+            }
 
-        protected abstract void Cleanup(T item);
+            _semaphore.Release();
+        }
         
-        private readonly HashSet<T> _freeClients = new HashSet<T>();
-        private readonly HashSet<T> _busyClients = new HashSet<T>();
+        private bool IsActual(PooledItem item) => _dateTimeProvider.GetCurrent() < item.ExpirationTime;
+
+        protected void Cleanup(T item)
+        {
+            
+        }
+        
+        private readonly ConcurrentStack<PooledItem> _freeClients = new ConcurrentStack<PooledItem>();
+        private readonly ConcurrentDictionary<T, PooledItem> _busyClients = new ConcurrentDictionary<T, PooledItem>();
         private readonly Func<T> _creator;
         private readonly TimeSpan _lifetime;
-        private readonly object _locker = new object();
+        private readonly SemaphoreSlim _semaphore;
+        private readonly IDateTimeProvider _dateTimeProvider;
         
         private const int DEFAULT_LIFETIME_SECONDS = 30;
+        private const int DEFAULT_CAPACITY = 10;
+
+        private class PooledItem
+        {
+            public PooledItem(T item, DateTime expirationTime)
+            {
+                Item = item;
+                ExpirationTime = expirationTime;
+            }
+            
+            public T Item { get; }
+            
+            public DateTime ExpirationTime { get; }
+        }
     }
 }
