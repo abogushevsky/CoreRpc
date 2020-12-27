@@ -12,8 +12,9 @@ namespace CoreRpc.UnitTests
         [Fact]
         public async Task GivenFirstObjectIsCreatedAfterFirstCallWhenObjectIsReleasedThenSameObjectIsReturnedOnSecondCall()
         {
+            var instanceNumber = 0;
             var testPool = new ObjectsPool<PooledObject>(
-                new PooledItemManager<PooledObject>(() => new PooledObject(), item => {}),
+                new PooledItemManager<PooledObject>(() => new PooledObject(++instanceNumber), item => {}),
                 TimeSpan.MaxValue,
                 _testDateTimeProvider,
                 1);
@@ -29,21 +30,47 @@ namespace CoreRpc.UnitTests
         }
 
         [Fact]
-        public void GivenFirstObjectIsLockedAndSecondCallIsPerformedThenSecondObjectIsCreated()
+        public async Task GivenFirstObjectIsLockedAndSecondCallIsPerformedThenSecondObjectIsCreated()
         {
+            var instanceNumber = 0;
             var testPool = new ObjectsPool<PooledObject>(
-                new PooledItemManager<PooledObject>(() => new PooledObject(), item => {}),
+                new PooledItemManager<PooledObject>(() => new PooledObject(++instanceNumber), item => {}),
                 TimeSpan.MaxValue,
                 _testDateTimeProvider,
                 2);
+
+            var testObject = await testPool.Acquire();
+            Assert.NotNull(testObject);
+            Assert.Equal(1, testObject.InstanceNumber);
+
+            var secondTestObject = await testPool.Acquire();
+            Assert.NotNull(secondTestObject);
+            Assert.Equal(2, secondTestObject.InstanceNumber);
             
-            Assert.True(false);
+            testPool.Release(secondTestObject);
+
+            secondTestObject = await testPool.Acquire();
+            Assert.NotNull(secondTestObject);
+            Assert.Equal(2, secondTestObject.InstanceNumber);
         }
 
         [Fact]
-        public void WhenAllObjectsAreLockedAndMaxPoolCapacityIsReachedThenCallerThreadIsLocked()
+        public async Task WhenAllObjectsAreLockedAndMaxPoolCapacityIsReachedThenCallerThreadIsLocked()
         {
-            Assert.True(false);
+            var instanceNumber = 0;
+            var testPool = new ObjectsPool<PooledObject>(
+                new PooledItemManager<PooledObject>(() => new PooledObject(++instanceNumber), item => {}),
+                TimeSpan.MaxValue,
+                _testDateTimeProvider,
+                1);
+            
+            var testObject = await testPool.Acquire();
+            Assert.NotNull(testObject);
+            Assert.Equal(1, testObject.InstanceNumber);
+
+            Assert.False(Task.WaitAll(new Task[] {testPool.Acquire()}, 500));
+            
+            testPool.Release(testObject);
         }
 
         private readonly TestDateTimeProvider _testDateTimeProvider = 
@@ -52,13 +79,11 @@ namespace CoreRpc.UnitTests
 
     internal class PooledObject
     {
-        public PooledObject()
+        public PooledObject(int instanceNumber)
         {
-            InstanceNumber = ++Count;
+            InstanceNumber = instanceNumber;
         }
 
         public int InstanceNumber { get; }
-
-        private static int Count = 0;
     }
 }
