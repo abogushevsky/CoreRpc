@@ -12,9 +12,11 @@ namespace CoreRpc.Networking.ConnectionPooling
         public ObjectsPool(
             PooledItemManager<T> itemManager, 
             IDateTimeProvider dateTimeProvider, 
-            int capacity = DefaultCapacity) : 
+            int capacity = DefaultCapacity,
+            int gracefulCompletionTimeoutSeconds = DefaultGracefulCompletionTimeoutSeconds) : 
             this(itemManager, TimeSpan.FromSeconds(DefaultLifetimeSeconds), dateTimeProvider, capacity)
         {
+            _gracefulCompletionTimeoutSeconds = gracefulCompletionTimeoutSeconds;
         }
         
         public ObjectsPool(
@@ -26,6 +28,7 @@ namespace CoreRpc.Networking.ConnectionPooling
             _itemManager = itemManager;
             _lifetime = lifetime;
             _dateTimeProvider = dateTimeProvider;
+            _capacity = capacity;
             _semaphore = new SemaphoreSlim(capacity);
         }
         
@@ -72,7 +75,6 @@ namespace CoreRpc.Networking.ConnectionPooling
             }
             else
             {
-                // TODO: Replace own logging with Trace or use own logger here
                 Trace.TraceError($"Pooled object for {item} not found");
             }
         }
@@ -81,7 +83,17 @@ namespace CoreRpc.Networking.ConnectionPooling
         {
             _isDisposed = true;
             _freeClients.ForEach(item => Cleanup(item.Item));
-            // TODO: Gracefully wait for completion of busy objects
+            var semaphore = _semaphore;
+            if (!SpinWait.SpinUntil(
+                () => semaphore.CurrentCount == _capacity,
+                TimeSpan.FromSeconds(_gracefulCompletionTimeoutSeconds)))
+            {
+                Trace.TraceError(
+                    $"Busy objects were not released in {_gracefulCompletionTimeoutSeconds} seconds");
+                _busyClients.ForEach(item => Cleanup(item.Value.Item));
+            }
+            
+            _semaphore.Dispose();
         }
         
         private bool IsActual(PooledItem item) => _dateTimeProvider.GetCurrent() < item.ExpirationTime;
@@ -104,10 +116,13 @@ namespace CoreRpc.Networking.ConnectionPooling
         private readonly TimeSpan _lifetime;
         private readonly SemaphoreSlim _semaphore;
         private readonly IDateTimeProvider _dateTimeProvider;
+        private readonly int _capacity;
+        private readonly int _gracefulCompletionTimeoutSeconds;
         private volatile bool _isDisposed;
         
         private const int DefaultLifetimeSeconds = 30;
         private const int DefaultCapacity = 10;
+        private const int DefaultGracefulCompletionTimeoutSeconds = 10;
 
         private class PooledItem
         {
