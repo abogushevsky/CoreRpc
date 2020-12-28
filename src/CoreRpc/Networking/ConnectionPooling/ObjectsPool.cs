@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
@@ -10,28 +11,40 @@ namespace CoreRpc.Networking.ConnectionPooling
     internal class ObjectsPool<T> : IObjectsPool<T>, IDisposable
     {
         public ObjectsPool(
-            PooledItemManager<T> itemManager, 
-            IDateTimeProvider dateTimeProvider, 
+            PooledItemManager<T> itemManager,
+            IObjectsPoolsRegistrar poolsRegistrar,
+            IDateTimeProvider dateTimeProvider,
             int capacity = DefaultCapacity,
-            int gracefulCompletionTimeoutSeconds = DefaultGracefulCompletionTimeoutSeconds) : 
-            this(itemManager, TimeSpan.FromSeconds(DefaultLifetimeSeconds), dateTimeProvider, capacity)
+            int gracefulCompletionTimeoutSeconds = DefaultGracefulCompletionTimeoutSeconds) :
+            this(
+                itemManager,
+                poolsRegistrar,
+                TimeSpan.FromSeconds(DefaultLifetimeSeconds),
+                dateTimeProvider,
+                capacity,
+                gracefulCompletionTimeoutSeconds)
         {
-            _gracefulCompletionTimeoutSeconds = gracefulCompletionTimeoutSeconds;
         }
-        
+
         public ObjectsPool(
-            PooledItemManager<T> itemManager, 
-            TimeSpan lifetime, 
-            IDateTimeProvider dateTimeProvider, 
-            int capacity = DefaultCapacity)
+            PooledItemManager<T> itemManager,
+            IObjectsPoolsRegistrar poolsRegistrar,
+            TimeSpan lifetime,
+            IDateTimeProvider dateTimeProvider,
+            int capacity = DefaultCapacity,
+            int gracefulCompletionTimeoutSeconds = DefaultGracefulCompletionTimeoutSeconds)
         {
             _itemManager = itemManager;
+            _poolsRegistrar = poolsRegistrar;
             _lifetime = lifetime;
             _dateTimeProvider = dateTimeProvider;
             _capacity = capacity;
+            _gracefulCompletionTimeoutSeconds = gracefulCompletionTimeoutSeconds;
             _semaphore = new SemaphoreSlim(capacity);
+
+            _poolsRegistrar.RegisterPool(this);
         }
-        
+
         public async Task<T> Acquire()
         {
             if (_isDisposed)
@@ -49,15 +62,12 @@ namespace CoreRpc.Networking.ConnectionPooling
             {
                 if (pooled != null)
                 {
-                    Cleanup(pooled.Item);
+                    Cleanup(pooled);
                 }
 
-                item = new PooledItem(
-                    _itemManager.Create(),
-                    _lifetime == TimeSpan.MaxValue
-                        ? DateTime.MaxValue
-                        : _dateTimeProvider.GetCurrent().Add(_lifetime));
+                item = new PooledItem(await _itemManager.Create(), GetExpirationDate());
             }
+
             _busyClients[item.Item] = item;
             return item.Item;
         }
@@ -68,9 +78,10 @@ namespace CoreRpc.Networking.ConnectionPooling
             {
                 if (!_isDisposed)
                 {
-                    _freeClients.Push(pooledItem);
+                    _freeClients.Push(
+                        new PooledItem(pooledItem.Item, GetExpirationDate()));
                 }
-                
+
                 _semaphore.Release();
             }
             else
@@ -78,11 +89,39 @@ namespace CoreRpc.Networking.ConnectionPooling
                 Trace.TraceError($"Pooled object for {item} not found");
             }
         }
-        
+
+        public async Task CleanupStaleObjects()
+        {
+            var staleObjects = new List<PooledItem>();
+            var actualObjects = new List<PooledItem>();
+            while (!_freeClients.IsEmpty)
+            {
+                if (_freeClients.TryPop(out var item))
+                {
+                    if (IsActual(item))
+                    {
+                        actualObjects.Add(item);
+                    }
+                    else
+                    {
+                        staleObjects.Add(item);
+                    }
+                }
+            }
+
+            _freeClients.PushRange(actualObjects.ToArray());
+
+            foreach (var staleObject in staleObjects)
+            {
+                await Cleanup(staleObject);
+            }
+        }
+
         public void Dispose()
         {
             _isDisposed = true;
-            _freeClients.ForEach(item => Cleanup(item.Item));
+            _poolsRegistrar.Deregister(this);
+            Cleanup(_freeClients).Wait();
             var semaphore = _semaphore;
             if (!SpinWait.SpinUntil(
                 () => semaphore.CurrentCount == _capacity,
@@ -90,26 +129,38 @@ namespace CoreRpc.Networking.ConnectionPooling
             {
                 Trace.TraceError(
                     $"Busy objects were not released in {_gracefulCompletionTimeoutSeconds} seconds");
-                _busyClients.ForEach(item => Cleanup(item.Value.Item));
+                Cleanup(_busyClients.Values).Wait();
             }
-            
+
             _semaphore.Dispose();
         }
         
+        private DateTime GetExpirationDate() => _lifetime == TimeSpan.MaxValue
+            ? DateTime.MaxValue
+            : _dateTimeProvider.GetCurrent().Add(_lifetime);
+
         private bool IsActual(PooledItem item) => _dateTimeProvider.GetCurrent() < item.ExpirationTime;
 
-        private void Cleanup(T item)
+        private async Task Cleanup(IEnumerable<PooledItem> items)
+        {
+            foreach (var item in items)
+            {
+                await Cleanup(item);
+            }
+        }
+
+        private async Task Cleanup(PooledItem item)
         {
             try
             {
-                _itemManager.Cleanup(item);
+                await _itemManager.Cleanup(item.Item);
             }
             catch (Exception ex)
             {
                 Trace.TraceError($"Exception occured during pooled item {item} cleanup: {ex}");
             }
-        } 
-        
+        }
+
         private readonly ConcurrentStack<PooledItem> _freeClients = new();
         private readonly ConcurrentDictionary<T, PooledItem> _busyClients = new();
         private readonly PooledItemManager<T> _itemManager;
@@ -117,9 +168,10 @@ namespace CoreRpc.Networking.ConnectionPooling
         private readonly SemaphoreSlim _semaphore;
         private readonly IDateTimeProvider _dateTimeProvider;
         private readonly int _capacity;
+        private readonly IObjectsPoolsRegistrar _poolsRegistrar;
         private readonly int _gracefulCompletionTimeoutSeconds;
         private volatile bool _isDisposed;
-        
+
         private const int DefaultLifetimeSeconds = 30;
         private const int DefaultCapacity = 10;
         private const int DefaultGracefulCompletionTimeoutSeconds = 10;
@@ -131,9 +183,9 @@ namespace CoreRpc.Networking.ConnectionPooling
                 Item = item;
                 ExpirationTime = expirationTime;
             }
-            
+
             public T Item { get; }
-            
+
             public DateTime ExpirationTime { get; }
         }
     }

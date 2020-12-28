@@ -1,4 +1,5 @@
 using System;
+using System.Threading;
 using System.Threading.Tasks;
 using CoreRpc.Networking.ConnectionPooling;
 using CoreRpc.UnitTests.Utilities;
@@ -9,12 +10,20 @@ namespace CoreRpc.UnitTests
 {
     public class ConnectionPoolTest
     {
+        public ConnectionPoolTest()
+        {
+            _poolsCleaner = new StalePooledObjectsCleaner(TimeSpan.FromMilliseconds(300));
+        }
+            
         [Fact]
-        public async Task GivenFirstObjectIsCreatedAfterFirstCallWhenObjectIsReleasedThenSameObjectIsReturnedOnSecondCall()
+        public async Task WhenFirstObjectIsCreatedAfterFirstCallWhenObjectIsReleasedThenSameObjectIsReturnedOnSecondCall()
         {
             var instanceNumber = 0;
             var testPool = new ObjectsPool<PooledObject>(
-                new PooledItemManager<PooledObject>(() => new PooledObject(++instanceNumber), item => {}),
+                new PooledItemManager<PooledObject>(
+                    () => Task.FromResult(new PooledObject(++instanceNumber)), 
+                    item => Task.CompletedTask),
+                _poolsCleaner,
                 TimeSpan.MaxValue,
                 _testDateTimeProvider,
                 1);
@@ -30,11 +39,14 @@ namespace CoreRpc.UnitTests
         }
 
         [Fact]
-        public async Task GivenFirstObjectIsLockedAndSecondCallIsPerformedThenSecondObjectIsCreated()
+        public async Task WhenFirstObjectIsLockedAndSecondCallIsPerformedThenSecondObjectIsCreated()
         {
             var instanceNumber = 0;
             var testPool = new ObjectsPool<PooledObject>(
-                new PooledItemManager<PooledObject>(() => new PooledObject(++instanceNumber), item => {}),
+                new PooledItemManager<PooledObject>(
+                    () => Task.FromResult(new PooledObject(++instanceNumber)), 
+                    item => Task.CompletedTask),
+                _poolsCleaner,
                 TimeSpan.MaxValue,
                 _testDateTimeProvider,
                 2);
@@ -59,7 +71,10 @@ namespace CoreRpc.UnitTests
         {
             var instanceNumber = 0;
             var testPool = new ObjectsPool<PooledObject>(
-                new PooledItemManager<PooledObject>(() => new PooledObject(++instanceNumber), item => {}),
+                new PooledItemManager<PooledObject>(
+                    () => Task.FromResult(new PooledObject(++instanceNumber)), 
+                    item => Task.CompletedTask),
+                _poolsCleaner,
                 TimeSpan.MaxValue,
                 _testDateTimeProvider,
                 1);
@@ -72,9 +87,87 @@ namespace CoreRpc.UnitTests
             
             testPool.Release(testObject);
         }
+        
+        [Fact]
+        public async Task WhenPooledObjectBecomesStaleThenItIsRemoved()
+        {
+            var instanceNumber = 0;
+            var disposedObjectsCount = 0;
+            var testPool = new ObjectsPool<PooledObject>(
+                new PooledItemManager<PooledObject>(
+                    () => Task.FromResult(new PooledObject(++instanceNumber)),
+                    item =>
+                    {
+                        disposedObjectsCount++;
+                        return Task.CompletedTask;
+                    }),
+                _poolsCleaner,
+                TimeSpan.FromSeconds(1),
+                _testDateTimeProvider,
+                2);
 
+            var fixedTime = DateTime.Now;
+            _testDateTimeProvider.FixDateTimeAt(fixedTime);
+            var firstObject = await testPool.Acquire();
+            
+            fixedTime += TimeSpan.FromMilliseconds(500);
+            _testDateTimeProvider.FixDateTimeAt(fixedTime);
+            var secondObject = await testPool.Acquire();
+            
+            testPool.Release(firstObject);
+            fixedTime += TimeSpan.FromMilliseconds(500);
+            _testDateTimeProvider.FixDateTimeAt(fixedTime);
+            testPool.Release(secondObject);
+            
+            fixedTime += TimeSpan.FromMilliseconds(500);
+            _testDateTimeProvider.FixDateTimeAt(fixedTime);
+            Thread.Sleep(500);
+            Assert.Equal(1, disposedObjectsCount);
+
+            var freeObject = await testPool.Acquire();
+            Assert.NotNull(freeObject);
+            Assert.Equal(2, freeObject.InstanceNumber);
+        }
+
+        [Fact]
+        public async Task WhenPooledObjectIsInUseThenItsExpirationTimeIsProlongated()
+        {
+            var instanceNumber = 0;
+            var disposedObjectsCount = 0;
+            var testPool = new ObjectsPool<PooledObject>(
+                new PooledItemManager<PooledObject>(
+                    () => Task.FromResult(new PooledObject(++instanceNumber)), 
+                    item =>
+                    {
+                        disposedObjectsCount++;
+                        return Task.CompletedTask;
+                    }),
+                _poolsCleaner,
+                TimeSpan.FromSeconds(1),
+                _testDateTimeProvider,
+                2);
+
+            var fixedTime = DateTime.Now;
+            _testDateTimeProvider.FixDateTimeAt(fixedTime);
+            var firstObject = await testPool.Acquire();
+            
+            fixedTime += TimeSpan.FromMilliseconds(500);
+            _testDateTimeProvider.FixDateTimeAt(fixedTime);
+            testPool.Release(firstObject);
+            
+            fixedTime += TimeSpan.FromMilliseconds(800);
+            _testDateTimeProvider.FixDateTimeAt(fixedTime);
+            Thread.Sleep(500);
+            Assert.Equal(0, disposedObjectsCount);
+
+            var freeObject = await testPool.Acquire();
+            Assert.Equal(1, freeObject.InstanceNumber);
+        }
+        
         private readonly TestDateTimeProvider _testDateTimeProvider = 
             new TestDateTimeProvider(new DateTimeProvider());
+
+        private StalePooledObjectsCleaner _poolsCleaner;
     }
 
     internal class PooledObject

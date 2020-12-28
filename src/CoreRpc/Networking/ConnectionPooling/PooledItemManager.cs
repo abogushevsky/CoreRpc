@@ -1,17 +1,18 @@
 using System;
+using System.Threading.Tasks;
 
 namespace CoreRpc.Networking.ConnectionPooling
 {
     public class PooledItemManager<T>
     {
-        public PooledItemManager(Func<T> create, Action<T> cleanup)
+        public PooledItemManager(Func<Task<T>> create, Func<T, Task> cleanup)
         {
             Create = create;
             Cleanup = cleanup;
         }
 
-        public Func<T> Create { get; }
+        public Func<Task<T>> Create { get; }
         
-        public Action<T> Cleanup { get; }
+        public Func<T, Task> Cleanup { get; }
     }
 }
