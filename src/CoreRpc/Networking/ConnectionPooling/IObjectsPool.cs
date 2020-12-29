@@ -3,12 +3,12 @@ using System.Threading.Tasks;
 
 namespace CoreRpc.Networking.ConnectionPooling
 {
-    internal interface IObjectsPool
+    public interface IObjectsPool
     {
         Task CleanupStaleObjects();
     }
     
-    internal interface IObjectsPool<T> : IObjectsPool, IDisposable
+    public interface IObjectsPool<T> : IObjectsPool, IDisposable
     {
         Task<T> Acquire();
 

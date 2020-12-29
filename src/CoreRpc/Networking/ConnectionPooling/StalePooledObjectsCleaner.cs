@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace CoreRpc.Networking.ConnectionPooling
 {
-    internal interface IObjectsPoolsRegistrar
+    public interface IObjectsPoolsRegistrar
     {
         void RegisterPool(IObjectsPool objectsPool);
 

@@ -10,7 +10,7 @@ using CoreRpc.Utilities;
 
 namespace CoreRpc.Networking.Rpc
 {
-	internal abstract class RpcTcpClientBase : IDisposable
+	public abstract class RpcTcpClientBase : IDisposable
 	{
 		protected RpcTcpClientBase(
 			string hostName,
