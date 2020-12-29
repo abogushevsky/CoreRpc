@@ -8,7 +8,7 @@ using CoreRpc.Utilities;
 
 namespace CoreRpc.Networking.ConnectionPooling
 {
-    internal class ObjectsPool<T> : IObjectsPool<T>, IDisposable
+    internal class ObjectsPool<T> : IObjectsPool<T>
     {
         public ObjectsPool(
             PooledItemManager<T> itemManager,
@@ -62,7 +62,9 @@ namespace CoreRpc.Networking.ConnectionPooling
             {
                 if (pooled != null)
                 {
+#pragma warning disable 4014 - we don't want to wait until cleanup is completed
                     Cleanup(pooled);
+#pragma warning restore 4014
                 }
 
                 item = new PooledItem(await _itemManager.Create(), GetExpirationDate());

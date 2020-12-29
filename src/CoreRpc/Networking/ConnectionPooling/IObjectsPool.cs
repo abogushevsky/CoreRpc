@@ -1,3 +1,4 @@
+using System;
 using System.Threading.Tasks;
 
 namespace CoreRpc.Networking.ConnectionPooling
@@ -7,7 +8,7 @@ namespace CoreRpc.Networking.ConnectionPooling
         Task CleanupStaleObjects();
     }
     
-    internal interface IObjectsPool<T> : IObjectsPool
+    internal interface IObjectsPool<T> : IObjectsPool, IDisposable
     {
         Task<T> Acquire();
 

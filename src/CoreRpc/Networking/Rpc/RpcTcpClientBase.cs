@@ -1,29 +1,33 @@
 using System;
 using System.IO;
 using System.Net.Sockets;
-using System.Threading;
 using System.Threading.Tasks;
 using CoreRpc.Logging;
+using CoreRpc.Networking.ConnectionPooling;
 using CoreRpc.Networking.Rpc.Exceptions;
 using CoreRpc.Serialization;
 using CoreRpc.Utilities;
 
 namespace CoreRpc.Networking.Rpc
 {
-	public abstract class RpcTcpClientBase : IDisposable
+	internal abstract class RpcTcpClientBase : IDisposable
 	{
 		protected RpcTcpClientBase(
 			string hostName,
 			int port,
+			IObjectsPoolsRegistrar poolsRegistrar,
+			IDateTimeProvider dateTimeProvider,
 			ISerializerFactory serializerFactory,
 			ILogger logger)
 		{
-			_hostName = hostName;
+			HostName = hostName;
 			_port = port;
+			_connectionsPool = new ObjectsPool<TcpClientHolder>(
+				new PooledItemManager<TcpClientHolder>(CreateTcpClient, CloseTcpClient),
+				poolsRegistrar,
+				dateTimeProvider);
 			_logger = logger;
 			_serviceCallResultSerializer = serializerFactory.CreateSerializer<ServiceCallResult>();
-
-			_tcpClient = new TcpClient();
 		}
 
 		// TODO: Rename Send and SendAndReceive
@@ -43,30 +47,35 @@ namespace CoreRpc.Networking.Rpc
 		
 		public void Dispose()
 		{
-			try
-			{
-				_tcpClientSemaphoreSlim.Wait(_closeTimeout);
-				if (_tcpClient.Connected)
-				{
-					ExceptionsHandlingHelper.ExecuteWithExceptionLogging(
-						() => SendDataAsync(
-							_networkStream, 
-							NetworkConstants.EndOfSessionMessageBytes).Wait(),
-						() =>
-						{
-							// ReSharper disable once AccessToDisposedClosure - synchronous code
-							_tcpClient.Close();
-							_networkStream.Dispose();
-						},
-						_logger);
-				}
+			_connectionsPool.Dispose();
+		}
 
-				_tcpClient.Dispose();
-			}
-			finally
+		private async Task<TcpClientHolder> CreateTcpClient()
+		{
+			var tcpClient = new TcpClient();
+			await tcpClient.ConnectAsync(HostName, _port);
+			var networkStream = await GetNetworkStreamFromTcpClientAsync(tcpClient);
+			return new TcpClientHolder(tcpClient, networkStream);
+		}
+
+		private async Task CloseTcpClient(TcpClientHolder tcpClientHolder)
+		{
+			if (tcpClientHolder.TcpClient.Connected)
 			{
-				_tcpClientSemaphoreSlim.Release();
+				await ExceptionsHandlingHelper.ExecuteWithExceptionLogging(
+					() => SendDataAsync(
+						tcpClientHolder.NetworkStream, 
+						NetworkConstants.EndOfSessionMessageBytes),
+					async () =>
+					{
+						// ReSharper disable once AccessToDisposedClosure - synchronous code
+						tcpClientHolder.TcpClient.Close();
+						await tcpClientHolder.NetworkStream.DisposeAsync();
+					},
+					_logger);
 			}
+
+			tcpClientHolder.TcpClient.Dispose();
 		}
 
 		private TResponse ConnectAndSend<TResponse>(
@@ -138,16 +147,11 @@ namespace CoreRpc.Networking.Rpc
 		
 		private TResult DoWithConnectedTcpClient<TResult>(Func<Stream, TResult> doWithNetworkStream)
 		{
+			TcpClientHolder tcpClientHolder = null;
 			try
 			{
-				_tcpClientSemaphoreSlim.Wait();
-				if (!_tcpClient.Connected)
-				{
-					_tcpClient.Connect(_hostName, _port);
-					_networkStream = GetNetworkStreamFromTcpClient(_tcpClient);
-				}
-
-				return doWithNetworkStream(_networkStream);
+				tcpClientHolder = _connectionsPool.Acquire().Result;
+				return doWithNetworkStream(tcpClientHolder.NetworkStream);
 			}
 			catch (SocketException socketException)
 			{
@@ -157,23 +161,21 @@ namespace CoreRpc.Networking.Rpc
 			}
 			finally
 			{
-				_tcpClientSemaphoreSlim.Release();
+				if (tcpClientHolder != null)
+				{
+					_connectionsPool.Release(tcpClientHolder);
+				}
 			}
 		}
 
 		private async Task<TResult> DoWithConnectedTcpClientAsync<TResult>(
 			Func<Stream, Task<TResult>> doWithNetworkStream)
 		{
+			TcpClientHolder tcpClientHolder = null;
 			try
 			{
-				await _tcpClientSemaphoreSlim.WaitAsync();
-				if (!_tcpClient.Connected)
-				{
-					await _tcpClient.ConnectAsync(_hostName, _port);
-					_networkStream = await GetNetworkStreamFromTcpClientAsync(_tcpClient);
-				}
-
-				return await doWithNetworkStream(_networkStream);
+				tcpClientHolder = await _connectionsPool.Acquire();
+				return await doWithNetworkStream(tcpClientHolder.NetworkStream);
 			}
 			catch (SocketException socketException)
 			{
@@ -183,25 +185,33 @@ namespace CoreRpc.Networking.Rpc
 			}
 			finally
 			{
-				_tcpClientSemaphoreSlim.Release();
+				if (tcpClientHolder != null)
+				{
+					_connectionsPool.Release(tcpClientHolder);
+				}
 			}
 		}
-		
-		protected abstract Stream GetNetworkStreamFromTcpClient(TcpClient tcpClient);
 
 		protected abstract Task<Stream> GetNetworkStreamFromTcpClientAsync(TcpClient tcpClient);
 
-		protected readonly string _hostName;
+		protected readonly string HostName;
 		
 		private readonly int _port;
+		private readonly IObjectsPool<TcpClientHolder> _connectionsPool;
 		private readonly ILogger _logger;
 		private readonly ISerializer<ServiceCallResult> _serviceCallResultSerializer;
-		private readonly TcpClient _tcpClient;
-		private Stream _networkStream;
-		private readonly SemaphoreSlim _tcpClientSemaphoreSlim = new SemaphoreSlim(1);
-		// TODO: Make configurable
-		private readonly TimeSpan _closeTimeout = TimeSpan.FromSeconds(DefaultCloseTimeoutSeconds);
 
-		private const int DefaultCloseTimeoutSeconds = 30;
+		private class TcpClientHolder
+		{
+			public TcpClientHolder(TcpClient tcpClient, Stream networkStream)
+			{
+				TcpClient = tcpClient;
+				NetworkStream = networkStream;
+			}
+
+			public TcpClient TcpClient { get; }
+			
+			public Stream NetworkStream { get; }
+		}
 	}
 }
