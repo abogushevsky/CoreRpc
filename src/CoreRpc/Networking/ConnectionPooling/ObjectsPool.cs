@@ -52,7 +52,7 @@ namespace CoreRpc.Networking.ConnectionPooling
                 throw new ObjectDisposedException("This ObjectsPool instance has been disposed");
             }
 
-            await _semaphore.WaitAsync();
+            await _semaphore.WaitAsync().ConfigureAwait(false);
             PooledItem item;
             if (_freeClients.TryPop(out var pooled) && IsActual(pooled))
             {
@@ -67,7 +67,7 @@ namespace CoreRpc.Networking.ConnectionPooling
 #pragma warning restore 4014
                 }
 
-                item = new PooledItem(await _itemManager.Create(), GetExpirationDate());
+                item = new PooledItem(await _itemManager.Create().ConfigureAwait(false), GetExpirationDate());
             }
 
             _busyClients[item.Item] = item;
@@ -115,7 +115,7 @@ namespace CoreRpc.Networking.ConnectionPooling
 
             foreach (var staleObject in staleObjects)
             {
-                await Cleanup(staleObject);
+                await Cleanup(staleObject).ConfigureAwait(false);
             }
         }
 
@@ -147,7 +147,7 @@ namespace CoreRpc.Networking.ConnectionPooling
         {
             foreach (var item in items)
             {
-                await Cleanup(item);
+                await Cleanup(item).ConfigureAwait(false);
             }
         }
 
@@ -155,7 +155,7 @@ namespace CoreRpc.Networking.ConnectionPooling
         {
             try
             {
-                await _itemManager.Cleanup(item.Item);
+                await _itemManager.Cleanup(item.Item).ConfigureAwait(false);
             }
             catch (Exception ex)
             {
@@ -175,7 +175,7 @@ namespace CoreRpc.Networking.ConnectionPooling
         private volatile bool _isDisposed;
 
         private const int DefaultLifetimeSeconds = 30;
-        private const int DefaultCapacity = 10;
+        private const int DefaultCapacity = 30;
         private const int DefaultGracefulCompletionTimeoutSeconds = 10;
 
         private class PooledItem

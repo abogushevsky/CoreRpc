@@ -10,33 +10,42 @@ namespace CoreRpc.TestContract
         public TestService(ILogger logger)
         {
             _logger = logger;
+            // Task.Factory.StartNew(LogCallsCount, TaskCreationOptions.LongRunning);
         }
         
         public int SetTestData(TestData testData)
         {
-            IncrementAndLogCallsCount();
+            IncrementCallsCount();
             return _random.Next(int.MaxValue);
         }
 
         public TestData GetTestData()
         {
-            IncrementAndLogCallsCount();
+            IncrementCallsCount();
             return new TestData();
         }
 
         public async Task<TestData> GetTestDataAsync()
         {
-            IncrementAndLogCallsCount();
+            IncrementCallsCount();
             await Task.Delay(100);
             return new TestData();
         }
 
         public async Task TestAsync() => await Task.Delay(100);
 
-        private void IncrementAndLogCallsCount()
+        private void IncrementCallsCount()
         {
             Interlocked.Increment(ref _callsCount);
-            _logger.LogInfo($"Current calls count: {_callsCount}");
+        }
+
+        private void LogCallsCount()
+        {
+            while (true)
+            {
+                Console.WriteLine($"Current calls count: {_callsCount}");
+                Thread.Sleep(500);
+            }
         }
 
         private int _callsCount;
