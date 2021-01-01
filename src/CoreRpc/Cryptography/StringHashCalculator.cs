@@ -5,7 +5,7 @@ using System.Text;
 namespace CoreRpc.Cryptography
 {
 	// TODO: add perf tests
-	public class StringHashCalculator : IStringHashCalculator, IDisposable
+	internal class StringHashCalculator : IStringHashCalculator, IDisposable
 	{
 		public StringHashCalculator(HashAlgorithm hashAlgorithm)
 		{

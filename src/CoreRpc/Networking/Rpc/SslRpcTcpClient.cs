@@ -3,7 +3,9 @@ using System.Net.Security;
 using System.Net.Sockets;
 using System.Threading.Tasks;
 using CoreRpc.Logging;
+using CoreRpc.Networking.ConnectionPooling;
 using CoreRpc.Serialization;
+using CoreRpc.Utilities;
 
 namespace CoreRpc.Networking.Rpc
 {
@@ -12,10 +14,12 @@ namespace CoreRpc.Networking.Rpc
 		public SslRpcTcpClient(
 			string hostName, 
 			int port, 
+			IObjectsPoolsRegistrar poolsRegistrar,
+			IDateTimeProvider dateTimeProvider,
 			ISerializerFactory serializerFactory,
 			RemoteCertificateValidationCallback serverCertificateValidationCallback,
 			ILogger logger) : 
-			base(hostName, port, serializerFactory, logger)
+			base(hostName, port, poolsRegistrar, dateTimeProvider, serializerFactory, logger)
 		{
 			_serverCertificateValidationCallback = serverCertificateValidationCallback;
 		}
@@ -23,26 +27,16 @@ namespace CoreRpc.Networking.Rpc
 		public SslRpcTcpClient(
 			string hostName, 
 			int port, 
+			IObjectsPoolsRegistrar poolsRegistrar,
+			IDateTimeProvider dateTimeProvider,
 			ISerializerFactory serializerFactory,
 			RemoteCertificateValidationCallback serverCertificateValidationCallback,
 			LocalCertificateSelectionCallback clientCertificateSelectionCallback,
 			ILogger logger) : 
-			base(hostName, port, serializerFactory, logger)
+			base(hostName, port, poolsRegistrar, dateTimeProvider, serializerFactory, logger)
 		{
 			_serverCertificateValidationCallback = serverCertificateValidationCallback;
 			_clientCertificateSelectionCallback = clientCertificateSelectionCallback;
-		}
-		
-		protected override Stream GetNetworkStreamFromTcpClient(TcpClient tcpClient)
-		{
-			var sslStream = new SslStream(
-				tcpClient.GetStream(), 
-				leaveInnerStreamOpen: false, 
-				userCertificateValidationCallback: _serverCertificateValidationCallback, 
-				userCertificateSelectionCallback: _clientCertificateSelectionCallback);
-			
-			sslStream.AuthenticateAsClient(_hostName); // TODO: select client cert
-			return sslStream;
 		}
 
 		protected override async Task<Stream> GetNetworkStreamFromTcpClientAsync(TcpClient tcpClient)
@@ -53,10 +47,10 @@ namespace CoreRpc.Networking.Rpc
 				userCertificateValidationCallback: _serverCertificateValidationCallback, 
 				userCertificateSelectionCallback: _clientCertificateSelectionCallback);
 			
-			await sslStream.AuthenticateAsClientAsync(_hostName); // TODO: select client cert
+			await sslStream.AuthenticateAsClientAsync(HostName); // TODO: select client cert
 			return sslStream;
 		}
-		
+
 		private readonly RemoteCertificateValidationCallback _serverCertificateValidationCallback;
 		private readonly LocalCertificateSelectionCallback _clientCertificateSelectionCallback;
 	}

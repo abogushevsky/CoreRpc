@@ -7,6 +7,7 @@ using System.Reflection;
 using System.Text;
 using CoreRpc.CodeGeneration;
 using CoreRpc.Logging;
+using CoreRpc.Networking.ConnectionPooling;
 using CoreRpc.Serialization;
 using CoreRpc.Serialization.MessagePack;
 using CoreRpc.Utilities;
@@ -34,6 +35,8 @@ namespace CoreRpc.Networking.Rpc
 			var tcpClient = new UnprotectedRpcTcpClient(
 				hostName, 
 				serviceDescriptor.ServicePort, 
+				ObjectsPoolRegistrar,
+				DateTimeProvider,
 				serializerFactory, 
 				logger);
 
@@ -55,6 +58,8 @@ namespace CoreRpc.Networking.Rpc
 			var tcpClient = new SslRpcTcpClient(
 				hostName, 
 				serviceDescriptor.ServicePort, 
+				ObjectsPoolRegistrar,
+				DateTimeProvider,
 				serializerFactory,
 				serverCertificateValidationCallback,
 				logger);
@@ -78,6 +83,8 @@ namespace CoreRpc.Networking.Rpc
 			var tcpClient = new SslRpcTcpClient(
 				hostName, 
 				serviceDescriptor.ServicePort, 
+				ObjectsPoolRegistrar,
+				DateTimeProvider,
 				serializerFactory,
 				serverCertificateValidationCallback,
 				clientCertificateSelectionCallback,
@@ -224,5 +231,8 @@ namespace CoreRpc.Networking.Rpc
 			AsyncHelper.IsAsyncMethod(methodInfo) ? 
 				new [] {SyntaxFactory.Token(SyntaxKind.PublicKeyword), SyntaxFactory.Token(SyntaxKind.AsyncKeyword)} : 
 				new [] {SyntaxFactory.Token(SyntaxKind.PublicKeyword)};
+
+		private static readonly IObjectsPoolsRegistrar ObjectsPoolRegistrar = new StalePooledObjectsCleaner();
+		private static readonly IDateTimeProvider DateTimeProvider = new DateTimeProvider();
 	}
 }

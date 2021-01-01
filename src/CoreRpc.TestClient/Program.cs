@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Diagnostics;
 using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
 using CoreRpc.Logging;
 using CoreRpc.Networking.Rpc;
@@ -15,7 +14,6 @@ namespace CoreRpc.TestClient
         {
             var logger = new LoggerStub();
             Helpers.LogCurrentMemoryUsage(logger);
-            // Console.ReadLine();
 
             using (var testServiceClient = ServiceClientFactory.CreateServiceClient<ITestService>(
                 "localhost",
@@ -29,12 +27,12 @@ namespace CoreRpc.TestClient
                     .Range(0, warmUpCallsCount)
                     .ParallelForEach(_ => SendRequestAndLogResult(testServiceClient.ServiceInstance, logger));
                 
+                Console.WriteLine("Warmup done");
                 GC.Collect(2, GCCollectionMode.Forced);
-                Thread.Sleep(TimeSpan.FromSeconds(5));
+                // Thread.Sleep(TimeSpan.FromSeconds(5));
                 
-                const int callsCount = 1000;
-                // RunTests(() => TestSyncOperations(testServiceClient.ServiceInstance, logger, callsCount), logger);
-                RunTests(() => TestAsyncOperations(testServiceClient.ServiceInstance, logger, 1), logger);
+                const int callsCount = 10000;
+                RunTests(() => TestAsyncOperations(testServiceClient.ServiceInstance, logger, callsCount), logger);
                 Console.WriteLine("All requests send.");
                 Console.ReadLine();
             }
@@ -73,15 +71,15 @@ namespace CoreRpc.TestClient
         private static void SendRequestAndLogResult(ITestService testServiceClient, ILogger logger)
         {
             var result = testServiceClient.GetTestData();
-            logger.LogDebug($"Result of GetTestData: {result.Id}");
-            logger.LogDebug($"Result of SetTestData: {testServiceClient.SetTestData(new TestData())}");
+            // logger.LogDebug($"Result of GetTestData: {result.Id}");
+            // logger.LogDebug($"Result of SetTestData: {testServiceClient.SetTestData(new TestData())}");
         }
 
         private static async Task SendRequestAndLogResultAsync(ITestService testServiceClient, ILogger logger)
         {
             var result = await testServiceClient.GetTestDataAsync();
-            logger.LogDebug($"Result of GetTestData: {result.Id}");
-            logger.LogDebug($"Result of SetTestData: {testServiceClient.SetTestData(new TestData())}");
+            // logger.LogDebug($"Result of GetTestData: {result.Id}");
+            // logger.LogDebug($"Result of SetTestData: {testServiceClient.SetTestData(new TestData())}");
         }
     }
 }

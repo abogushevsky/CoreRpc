@@ -1,0 +1,52 @@
+17.02.2019
+Server:
+    at start: 19 Mb
+    at end: 36 Mb
+ 
+Client:
+    at start: 19 Mb
+    at end: 86 Mb
+    Time: 625,1346 ms
+    
+    
+21.02.2019 Single channel
+
+Client:
+    at start: 19 Mb
+    at end: 86 Mb
+    Time: 197,7867
+    
+Async
+Client:
+    Memory working set: 16 Mb
+    Test service client created.
+    Elapsed ms: 149.2866
+    Memory working set: 77 Mb
+    All requests send.
+    
+Sync
+Client:
+    Memory working set: 16 Mb
+    Test service client created.
+    Elapsed ms: 146.4064
+    Memory working set: 77 Mb
+    All requests send.
+    
+Connection pool:
+    Memory working set: 15 Mb
+    Test service client created.
+    Warmup done
+    Elapsed ms: 34873.8647
+    Memory working set: 93 Mb
+    All requests send.
+    
+No pool:
+    Memory working set: 15 Mb
+    Test service client created.
+    Warmup done
+    Elapsed ms: 1044586.7006
+    Memory working set: 100 Mb
+    All requests send.
+
+
+

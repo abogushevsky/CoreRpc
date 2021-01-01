@@ -9,10 +9,10 @@
         <PackageLicenseUrl>https://github.com/abogushevsky/CoreRpc/blob/master/LICENSE</PackageLicenseUrl>
         <RepositoryUrl>https://github.com/abogushevsky/CoreRpc</RepositoryUrl>
         <PublicSign>false</PublicSign>
-        <TargetFrameworks>netcoreapp3.1;netcoreapp2.2</TargetFrameworks>
         <LangVersion>default</LangVersion>
         <PackageId>JustRpc</PackageId>
         <PackageReleaseNotes>- Synchronous client implementation fixed</PackageReleaseNotes>
+        <TargetFramework>netcoreapp3.1</TargetFramework>
     </PropertyGroup>
 <ItemGroup>
     <PackageReference Include="Microsoft.CodeAnalysis" Version="2.9.0" />

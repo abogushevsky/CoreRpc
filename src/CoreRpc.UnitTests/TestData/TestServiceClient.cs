@@ -1,8 +1,10 @@
 ﻿using System.Collections.Generic;
 using System.Threading.Tasks;
 using CoreRpc.Logging;
+using CoreRpc.Networking.ConnectionPooling;
 using CoreRpc.Networking.Rpc;
 using CoreRpc.Serialization;
+using CoreRpc.Utilities;
 
 namespace CoreRpc.UnitTests.TestData
 {
@@ -12,7 +14,13 @@ namespace CoreRpc.UnitTests.TestData
 		{
 			_serviceDescriptor = ServiceDescriptor.Of<ITestService>();
 			_serializerFactory = serializerFactory;
-			_tcpClient = new UnprotectedRpcTcpClient(hostName, port, _serializerFactory, new LoggerStub());
+			_tcpClient = new UnprotectedRpcTcpClient(
+				hostName, 
+				port, 
+				new StalePooledObjectsCleaner(),
+				new DateTimeProvider(),
+				_serializerFactory, 
+				new LoggerStub());
 		}
 		
 		public int GetHashCodeOfMe(SerializableObject me)
