@@ -23,7 +23,7 @@ namespace CoreRpc.Networking.Rpc
 		{
 			HostName = hostName;
 			_port = port;
-			if (parameters != null)
+			if (parameters == null)
 			{
 				_connectionsPool = new ObjectsPool<TcpClientHolder>(
 					new PooledItemManager<TcpClientHolder>(CreateTcpClient, CloseTcpClient),
@@ -41,7 +41,7 @@ namespace CoreRpc.Networking.Rpc
 					parameters.ConnectionPoolSize);
 			}
 
-				_logger = logger;
+			_logger = logger;
 			_serviceCallResultSerializer = serializerFactory.CreateSerializer<ServiceCallResult>();
 		}
 
