@@ -15,11 +15,11 @@ namespace CoreRpc.UnitTests
 		public void SyncClientMethodsTest()
 		{
 			var serializerFactory = new MessagePackSerializerFactory();
+			var serviceClientFactory = new ServiceClientFactory(new LoggerStub());
 			using (var _ = GetTestService(serializerFactory))
 			{
-				using (var client = ServiceClientFactory.CreateServiceClient<ITestService>(
+				using (var client = serviceClientFactory.CreateServiceClient<ITestService>(
 					"localhost",
-					new LoggerStub(),
 					serializerFactory))
 				{
 
@@ -42,11 +42,11 @@ namespace CoreRpc.UnitTests
 		public async void AsyncClientMethodsTest()
 		{
 			var serializerFactory = new MessagePackSerializerFactory();
+			var serviceClientFactory = new ServiceClientFactory(new LoggerStub());
 			using (var _ = GetTestService(serializerFactory))
 			{
-				using (var client = ServiceClientFactory.CreateServiceClient<ITestService>(
+				using (var client = serviceClientFactory.CreateServiceClient<ITestService>(
 					"localhost",
-					new LoggerStub(),
 					serializerFactory))
 				{
 

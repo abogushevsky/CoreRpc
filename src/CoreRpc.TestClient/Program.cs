@@ -15,9 +15,10 @@ namespace CoreRpc.TestClient
             var logger = new LoggerStub();
             Helpers.LogCurrentMemoryUsage(logger);
 
-            using (var testServiceClient = ServiceClientFactory.CreateServiceClient<ITestService>(
-                "localhost",
-                logger))
+            var serviceClientFactory = new ServiceClientFactory(logger);
+
+            using (var testServiceClient = serviceClientFactory.CreateServiceClient<ITestService>(
+                "localhost"))
             {
                 Console.WriteLine("Test service client created.");
 

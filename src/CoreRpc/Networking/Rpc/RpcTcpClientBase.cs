@@ -28,7 +28,8 @@ namespace CoreRpc.Networking.Rpc
 				_connectionsPool = new ObjectsPool<TcpClientHolder>(
 					new PooledItemManager<TcpClientHolder>(CreateTcpClient, CloseTcpClient),
 					poolsRegistrar,
-					dateTimeProvider);
+					dateTimeProvider,
+					logger);
 			}
 			else
 			{
@@ -36,6 +37,7 @@ namespace CoreRpc.Networking.Rpc
 					new PooledItemManager<TcpClientHolder>(CreateTcpClient, CloseTcpClient),
 					poolsRegistrar,
 					dateTimeProvider,
+					logger,
 					parameters.ConnectionPoolSize);
 			}
 

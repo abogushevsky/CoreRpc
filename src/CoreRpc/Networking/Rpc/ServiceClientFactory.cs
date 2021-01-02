@@ -17,18 +17,27 @@ using Microsoft.CodeAnalysis.CSharp;
 namespace CoreRpc.Networking.Rpc
 {
 	[SuppressMessage("ReSharper", "CoVariantArrayConversion")]
-	public static class ServiceClientFactory
+	public class ServiceClientFactory : IServiceClientFactory
 	{
-		public static ServiceClient<TService> CreateServiceClient<TService>(
-			string hostName,
-			ILogger logger) where TService : class
+		public ServiceClientFactory(ILogger logger) : this(new DateTimeProvider(), logger)
 		{
-			return CreateServiceClient<TService>(hostName, logger, new MessagePackSerializerFactory());
+			
 		}
 		
-		public static ServiceClient<TService> CreateServiceClient<TService>(
+		public ServiceClientFactory(IDateTimeProvider dateTimeProvider, ILogger logger)
+		{
+			_objectsPoolRegistrar = new StalePooledObjectsCleaner(logger);
+			_dateTimeProvider = dateTimeProvider;
+			_logger = logger;
+		}
+			
+		public ServiceClient<TService> CreateServiceClient<TService>(string hostName) where TService : class
+		{
+			return CreateServiceClient<TService>(hostName, new MessagePackSerializerFactory());
+		}
+		
+		public ServiceClient<TService> CreateServiceClient<TService>(
 			string hostName, 
-			ILogger logger,
 			ISerializerFactory serializerFactory,
 			ClientParameters parameters = null) where TService : class
 		{
@@ -36,23 +45,22 @@ namespace CoreRpc.Networking.Rpc
 			var tcpClient = new UnprotectedRpcTcpClient(
 				hostName, 
 				serviceDescriptor.ServicePort, 
-				ObjectsPoolRegistrar,
-				DateTimeProvider,
+				_objectsPoolRegistrar,
+				_dateTimeProvider,
 				serializerFactory, 
-				logger,
+				_logger,
 				parameters);
 
 			return CreateServiceClientInstance<TService>(
 				       hostName,
-				       logger,
+				       _logger,
 				       serializerFactory,
 				       serviceDescriptor,
 				       tcpClient);
 		}
 		
-		public static ServiceClient<TService> CreateSecuredServiceClient<TService>(
-			string hostName, 
-			ILogger logger,
+		public ServiceClient<TService> CreateSecuredServiceClient<TService>(
+			string hostName,
 			ISerializerFactory serializerFactory,			
 			RemoteCertificateValidationCallback serverCertificateValidationCallback,
 			ClientParameters parameters = null) where TService : class
@@ -61,24 +69,23 @@ namespace CoreRpc.Networking.Rpc
 			var tcpClient = new SslRpcTcpClient(
 				hostName, 
 				serviceDescriptor.ServicePort, 
-				ObjectsPoolRegistrar,
-				DateTimeProvider,
+				_objectsPoolRegistrar,
+				_dateTimeProvider,
 				serializerFactory,
 				serverCertificateValidationCallback,
-				logger,
+				_logger,
 				parameters);
 
 			return CreateServiceClientInstance<TService>(
 				hostName,
-				logger,
+				_logger,
 				serializerFactory,
 				serviceDescriptor,
 				tcpClient);
 		}
 		
-		public static ServiceClient<TService> CreateSecuredServiceClient<TService>(
-			string hostName, 
-			ILogger logger,
+		public ServiceClient<TService> CreateSecuredServiceClient<TService>(
+			string hostName,
 			ISerializerFactory serializerFactory,			
 			RemoteCertificateValidationCallback serverCertificateValidationCallback,
 			LocalCertificateSelectionCallback clientCertificateSelectionCallback,
@@ -88,17 +95,17 @@ namespace CoreRpc.Networking.Rpc
 			var tcpClient = new SslRpcTcpClient(
 				hostName, 
 				serviceDescriptor.ServicePort, 
-				ObjectsPoolRegistrar,
-				DateTimeProvider,
+				_objectsPoolRegistrar,
+				_dateTimeProvider,
 				serializerFactory,
 				serverCertificateValidationCallback,
 				clientCertificateSelectionCallback,
-				logger,
+				_logger,
 				parameters);
 
 			return CreateServiceClientInstance<TService>(
 				hostName,
-				logger,
+				_logger,
 				serializerFactory,
 				serviceDescriptor,
 				tcpClient);
@@ -238,7 +245,8 @@ namespace CoreRpc.Networking.Rpc
 				new [] {SyntaxFactory.Token(SyntaxKind.PublicKeyword), SyntaxFactory.Token(SyntaxKind.AsyncKeyword)} : 
 				new [] {SyntaxFactory.Token(SyntaxKind.PublicKeyword)};
 
-		private static readonly IObjectsPoolsRegistrar ObjectsPoolRegistrar = new StalePooledObjectsCleaner();
-		private static readonly IDateTimeProvider DateTimeProvider = new DateTimeProvider();
+		private readonly IObjectsPoolsRegistrar _objectsPoolRegistrar;
+		private readonly IDateTimeProvider _dateTimeProvider;
+		private readonly ILogger _logger;
 	}
 }

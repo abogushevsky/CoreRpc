@@ -1,9 +1,9 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
+using CoreRpc.Logging;
 using CoreRpc.Utilities;
 
 namespace CoreRpc.Networking.ConnectionPooling
@@ -14,6 +14,7 @@ namespace CoreRpc.Networking.ConnectionPooling
             PooledItemManager<T> itemManager,
             IObjectsPoolsRegistrar poolsRegistrar,
             IDateTimeProvider dateTimeProvider,
+            ILogger logger,
             int capacity = DefaultCapacity,
             int gracefulCompletionTimeoutSeconds = DefaultGracefulCompletionTimeoutSeconds) :
             this(
@@ -21,9 +22,11 @@ namespace CoreRpc.Networking.ConnectionPooling
                 poolsRegistrar,
                 TimeSpan.FromSeconds(DefaultLifetimeSeconds),
                 dateTimeProvider,
+                logger,
                 capacity,
                 gracefulCompletionTimeoutSeconds)
         {
+            
         }
 
         public ObjectsPool(
@@ -31,6 +34,7 @@ namespace CoreRpc.Networking.ConnectionPooling
             IObjectsPoolsRegistrar poolsRegistrar,
             TimeSpan lifetime,
             IDateTimeProvider dateTimeProvider,
+            ILogger logger,
             int capacity = DefaultCapacity,
             int gracefulCompletionTimeoutSeconds = DefaultGracefulCompletionTimeoutSeconds)
         {
@@ -38,6 +42,7 @@ namespace CoreRpc.Networking.ConnectionPooling
             _poolsRegistrar = poolsRegistrar;
             _lifetime = lifetime;
             _dateTimeProvider = dateTimeProvider;
+            _logger = logger;
             _capacity = capacity;
             _gracefulCompletionTimeoutSeconds = gracefulCompletionTimeoutSeconds;
             _semaphore = new SemaphoreSlim(capacity);
@@ -88,7 +93,7 @@ namespace CoreRpc.Networking.ConnectionPooling
             }
             else
             {
-                Trace.TraceError($"Pooled object for {item} not found");
+                _logger.LogError($"Pooled object for {item} not found");
             }
         }
 
@@ -129,7 +134,7 @@ namespace CoreRpc.Networking.ConnectionPooling
                 () => semaphore.CurrentCount == _capacity,
                 TimeSpan.FromSeconds(_gracefulCompletionTimeoutSeconds)))
             {
-                Trace.TraceError(
+                _logger.LogError(
                     $"Busy objects were not released in {_gracefulCompletionTimeoutSeconds} seconds");
                 Cleanup(_busyClients.Values).Wait();
             }
@@ -159,7 +164,7 @@ namespace CoreRpc.Networking.ConnectionPooling
             }
             catch (Exception ex)
             {
-                Trace.TraceError($"Exception occured during pooled item {item} cleanup: {ex}");
+                _logger.LogError($"Exception occured during pooled item {item} cleanup: {ex}");
             }
         }
 
@@ -171,6 +176,7 @@ namespace CoreRpc.Networking.ConnectionPooling
         private readonly IDateTimeProvider _dateTimeProvider;
         private readonly int _capacity;
         private readonly IObjectsPoolsRegistrar _poolsRegistrar;
+        private readonly ILogger _logger;
         private readonly int _gracefulCompletionTimeoutSeconds;
         private volatile bool _isDisposed;
 

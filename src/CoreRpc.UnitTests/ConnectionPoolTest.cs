@@ -1,6 +1,7 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using CoreRpc.Logging;
 using CoreRpc.Networking.ConnectionPooling;
 using CoreRpc.UnitTests.Utilities;
 using CoreRpc.Utilities;
@@ -12,7 +13,7 @@ namespace CoreRpc.UnitTests
     {
         public ConnectionPoolTest()
         {
-            _poolsCleaner = new StalePooledObjectsCleaner(TimeSpan.FromMilliseconds(300));
+            _poolsCleaner = new StalePooledObjectsCleaner(new LoggerStub(), TimeSpan.FromMilliseconds(300));
         }
             
         [Fact]
@@ -26,6 +27,7 @@ namespace CoreRpc.UnitTests
                 _poolsCleaner,
                 TimeSpan.MaxValue,
                 _testDateTimeProvider,
+                new LoggerStub(),
                 1);
             var testObject = await testPool.Acquire();
             Assert.NotNull(testObject);
@@ -49,6 +51,7 @@ namespace CoreRpc.UnitTests
                 _poolsCleaner,
                 TimeSpan.MaxValue,
                 _testDateTimeProvider,
+                new LoggerStub(),
                 2);
 
             var testObject = await testPool.Acquire();
@@ -77,6 +80,7 @@ namespace CoreRpc.UnitTests
                 _poolsCleaner,
                 TimeSpan.MaxValue,
                 _testDateTimeProvider,
+                new LoggerStub(),
                 1);
             
             var testObject = await testPool.Acquire();
@@ -104,6 +108,7 @@ namespace CoreRpc.UnitTests
                 _poolsCleaner,
                 TimeSpan.FromSeconds(1),
                 _testDateTimeProvider,
+                new LoggerStub(),
                 2);
 
             var fixedTime = DateTime.Now;
@@ -145,6 +150,7 @@ namespace CoreRpc.UnitTests
                 _poolsCleaner,
                 TimeSpan.FromSeconds(1),
                 _testDateTimeProvider,
+                new LoggerStub(),
                 2);
 
             var fixedTime = DateTime.Now;

@@ -12,15 +12,16 @@ namespace CoreRpc.UnitTests.TestData
 	{
 		public TestServiceClient(string hostName, int port, ISerializerFactory serializerFactory)
 		{
+			var logger = new LoggerStub();
 			_serviceDescriptor = ServiceDescriptor.Of<ITestService>();
 			_serializerFactory = serializerFactory;
 			_tcpClient = new UnprotectedRpcTcpClient(
 				hostName, 
 				port, 
-				new StalePooledObjectsCleaner(),
+				new StalePooledObjectsCleaner(logger),
 				new DateTimeProvider(),
 				_serializerFactory, 
-				new LoggerStub(),
+				logger,
 				null);
 		}
 		

@@ -1,8 +1,8 @@
 using System;
 using System.Collections.Concurrent;
-using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
+using CoreRpc.Logging;
 
 namespace CoreRpc.Networking.ConnectionPooling
 {
@@ -15,13 +15,16 @@ namespace CoreRpc.Networking.ConnectionPooling
     
     internal class StalePooledObjectsCleaner : IObjectsPoolsRegistrar, IDisposable 
     {
-        public StalePooledObjectsCleaner() : this(TimeSpan.FromSeconds(DefaultCleanupIntervalSeconds))
+        public StalePooledObjectsCleaner(ILogger logger) : this(
+            logger, 
+            TimeSpan.FromSeconds(DefaultCleanupIntervalSeconds))
         {
             
         }
         
-        public StalePooledObjectsCleaner(TimeSpan cleanupInterval)
+        public StalePooledObjectsCleaner(ILogger logger, TimeSpan cleanupInterval)
         {
+            _logger = logger;
             CleanupInterval = cleanupInterval;
             Task.Factory.StartNew(
                 Cleanup, 
@@ -36,7 +39,7 @@ namespace CoreRpc.Networking.ConnectionPooling
         {
             if (!PoolsToClean.TryRemove(objectsPool, out _))
             {
-                Trace.TraceError($"ObjectsPool {objectsPool} was not found in {PoolsToClean}");
+                _logger.LogError($"ObjectsPool {objectsPool} was not found in {PoolsToClean}");
             }
         }
         
@@ -65,7 +68,7 @@ namespace CoreRpc.Networking.ConnectionPooling
                     }
                     catch (Exception ex)
                     {
-                        Trace.TraceError($"Failed to clean pool {pool}: {ex}");
+                        _logger.LogError($"Failed to clean pool {pool}: {ex}");
                     }
                 }
             }
@@ -73,6 +76,7 @@ namespace CoreRpc.Networking.ConnectionPooling
 
         private readonly ConcurrentDictionary<IObjectsPool, bool> PoolsToClean = new();
         private readonly CancellationTokenSource _cancellationTokenSource = new();
+        private readonly ILogger _logger;
         private readonly TimeSpan CleanupInterval;
         private volatile bool _isDisposed;
 
