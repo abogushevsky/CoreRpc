@@ -124,7 +124,8 @@ publishedService.Dispose();
 
 Generate client (note that implementation of ISerializerFactory on client and server side should be same):
 ```C#
-using (var serviceClient = ServiceClientFactory.CreateServiceClient<ITestService>("<service address>", logger, serializerFactory)) // use CreateSecuredServiceClient for SSL communications.
+var serviceClientFactory = new ServiceClientFactory(logger);
+using (var serviceClient = serviceClientFactory.CreateServiceClient<ITestService>("<service address>", logger, serializerFactory)) // use CreateSecuredServiceClient for SSL communications.
 {
     // use serviceClient.ServiceInstance
 }
