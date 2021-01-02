@@ -174,7 +174,7 @@ namespace CoreRpc.Networking.ConnectionPooling
         private readonly int _gracefulCompletionTimeoutSeconds;
         private volatile bool _isDisposed;
 
-        private const int DefaultLifetimeSeconds = 30;
+        private const int DefaultLifetimeSeconds = 60;
         private const int DefaultCapacity = 30;
         private const int DefaultGracefulCompletionTimeoutSeconds = 10;
 
