@@ -18,8 +18,9 @@ namespace CoreRpc.Networking.Rpc
 			IDateTimeProvider dateTimeProvider,
 			ISerializerFactory serializerFactory,
 			RemoteCertificateValidationCallback serverCertificateValidationCallback,
-			ILogger logger) : 
-			base(hostName, port, poolsRegistrar, dateTimeProvider, serializerFactory, logger)
+			ILogger logger,
+			ClientParameters parameters) : 
+			base(hostName, port, poolsRegistrar, dateTimeProvider, serializerFactory, logger, parameters)
 		{
 			_serverCertificateValidationCallback = serverCertificateValidationCallback;
 		}
@@ -32,8 +33,9 @@ namespace CoreRpc.Networking.Rpc
 			ISerializerFactory serializerFactory,
 			RemoteCertificateValidationCallback serverCertificateValidationCallback,
 			LocalCertificateSelectionCallback clientCertificateSelectionCallback,
-			ILogger logger) : 
-			base(hostName, port, poolsRegistrar, dateTimeProvider, serializerFactory, logger)
+			ILogger logger,
+			ClientParameters parameters) : 
+			base(hostName, port, poolsRegistrar, dateTimeProvider, serializerFactory, logger, parameters)
 		{
 			_serverCertificateValidationCallback = serverCertificateValidationCallback;
 			_clientCertificateSelectionCallback = clientCertificateSelectionCallback;

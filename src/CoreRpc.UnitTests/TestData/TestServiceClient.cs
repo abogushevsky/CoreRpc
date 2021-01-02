@@ -20,7 +20,8 @@ namespace CoreRpc.UnitTests.TestData
 				new StalePooledObjectsCleaner(),
 				new DateTimeProvider(),
 				_serializerFactory, 
-				new LoggerStub());
+				new LoggerStub(),
+				null);
 		}
 		
 		public int GetHashCodeOfMe(SerializableObject me)

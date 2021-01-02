@@ -16,7 +16,15 @@ namespace CoreRpc.Networking.Rpc
 			IObjectsPoolsRegistrar poolsRegistrar,
 			IDateTimeProvider dateTimeProvider,
 			ISerializerFactory serializerFactory,
-			ILogger logger) : base(hostName, port, poolsRegistrar, dateTimeProvider, serializerFactory, logger)
+			ILogger logger,
+			ClientParameters parameters) : base(
+			hostName, 
+			port,
+			poolsRegistrar,
+			dateTimeProvider,
+			serializerFactory,
+			logger,
+			parameters)
 		{
 		}
 		

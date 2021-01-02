@@ -29,7 +29,8 @@ namespace CoreRpc.Networking.Rpc
 		public static ServiceClient<TService> CreateServiceClient<TService>(
 			string hostName, 
 			ILogger logger,
-			ISerializerFactory serializerFactory) where TService : class
+			ISerializerFactory serializerFactory,
+			ClientParameters parameters = null) where TService : class
 		{
 			var serviceDescriptor = ServiceDescriptor.Of<TService>();
 			var tcpClient = new UnprotectedRpcTcpClient(
@@ -38,7 +39,8 @@ namespace CoreRpc.Networking.Rpc
 				ObjectsPoolRegistrar,
 				DateTimeProvider,
 				serializerFactory, 
-				logger);
+				logger,
+				parameters);
 
 			return CreateServiceClientInstance<TService>(
 				       hostName,
@@ -52,7 +54,8 @@ namespace CoreRpc.Networking.Rpc
 			string hostName, 
 			ILogger logger,
 			ISerializerFactory serializerFactory,			
-			RemoteCertificateValidationCallback serverCertificateValidationCallback) where TService : class
+			RemoteCertificateValidationCallback serverCertificateValidationCallback,
+			ClientParameters parameters = null) where TService : class
 		{
 			var serviceDescriptor = ServiceDescriptor.Of<TService>();
 			var tcpClient = new SslRpcTcpClient(
@@ -62,7 +65,8 @@ namespace CoreRpc.Networking.Rpc
 				DateTimeProvider,
 				serializerFactory,
 				serverCertificateValidationCallback,
-				logger);
+				logger,
+				parameters);
 
 			return CreateServiceClientInstance<TService>(
 				hostName,
@@ -77,7 +81,8 @@ namespace CoreRpc.Networking.Rpc
 			ILogger logger,
 			ISerializerFactory serializerFactory,			
 			RemoteCertificateValidationCallback serverCertificateValidationCallback,
-			LocalCertificateSelectionCallback clientCertificateSelectionCallback) where TService : class
+			LocalCertificateSelectionCallback clientCertificateSelectionCallback,
+			ClientParameters parameters = null) where TService : class
 		{
 			var serviceDescriptor = ServiceDescriptor.Of<TService>();
 			var tcpClient = new SslRpcTcpClient(
@@ -88,7 +93,8 @@ namespace CoreRpc.Networking.Rpc
 				serializerFactory,
 				serverCertificateValidationCallback,
 				clientCertificateSelectionCallback,
-				logger);
+				logger,
+				parameters);
 
 			return CreateServiceClientInstance<TService>(
 				hostName,

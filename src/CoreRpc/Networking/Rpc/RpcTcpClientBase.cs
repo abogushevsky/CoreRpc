@@ -18,19 +18,30 @@ namespace CoreRpc.Networking.Rpc
 			IObjectsPoolsRegistrar poolsRegistrar,
 			IDateTimeProvider dateTimeProvider,
 			ISerializerFactory serializerFactory,
-			ILogger logger)
+			ILogger logger,
+			ClientParameters parameters)
 		{
 			HostName = hostName;
 			_port = port;
-			_connectionsPool = new ObjectsPool<TcpClientHolder>(
-				new PooledItemManager<TcpClientHolder>(CreateTcpClient, CloseTcpClient),
-				poolsRegistrar,
-				dateTimeProvider);
-			_logger = logger;
+			if (parameters != null)
+			{
+				_connectionsPool = new ObjectsPool<TcpClientHolder>(
+					new PooledItemManager<TcpClientHolder>(CreateTcpClient, CloseTcpClient),
+					poolsRegistrar,
+					dateTimeProvider);
+			}
+			else
+			{
+				_connectionsPool = new ObjectsPool<TcpClientHolder>(
+					new PooledItemManager<TcpClientHolder>(CreateTcpClient, CloseTcpClient),
+					poolsRegistrar,
+					dateTimeProvider,
+					parameters.ConnectionPoolSize);
+			}
+
+				_logger = logger;
 			_serviceCallResultSerializer = serializerFactory.CreateSerializer<ServiceCallResult>();
 		}
-
-		// TODO: Rename Send and SendAndReceive
 
 		public void Send(byte[] data) => ConnectAndSend(serviceCallResult => 0, data);
 
