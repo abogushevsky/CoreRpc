@@ -124,7 +124,7 @@ namespace CoreRpc.Networking.Rpc
 			{
 				_logger.LogError(exception);
 				throw new CoreRpcCommunicationException(
-					$"Server doesn't provide a meanfull response. Original exception text {exception.Message}");
+					$"Server didn't provide a meaningful response. Original exception text: '{exception.Message}'");
 			}
 		}
 
@@ -148,7 +148,7 @@ namespace CoreRpc.Networking.Rpc
 			{
 				_logger.LogError(exception);
 				throw new CoreRpcCommunicationException(
-					$"Server doesn't provide a meanfull response. Original exception text {exception.Message}");
+					$"Server didn't provide a meaningful response. Original exception text: '{exception.Message}'");
 			}
 		}
 		
